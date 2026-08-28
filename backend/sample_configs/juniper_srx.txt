@@ -1,0 +1,221 @@
+## Last changed: 2024-09-15 08:30:00 UTC
+version 21.4R3-S5.3;
+system {
+    host-name SRX-FW-01;
+    domain-name corp.internal;
+    time-zone America/New_York;
+    root-authentication {
+        encrypted-password "$6$Rk8Lm3Np$Qr5St7Uv9Wx1Yz3Ab5Cd7Ef9Gh1Ij3Kl5Mn7Op9Qr";
+    }
+    name-server {
+        10.0.0.53;
+        10.0.0.54;
+    }
+    login {
+        user admin {
+            uid 2001;
+            class super-user;
+            authentication {
+                encrypted-password "$6$Xa2Yb4Zc$Df6Eg8Fh0Gi2Hj4Ik6Jl8Km0Ln2Mo4Np6Oq8Pr0Qs";
+            }
+        }
+        user readonly {
+            uid 2002;
+            class read-only;
+            authentication {
+                encrypted-password "$6$Tu2Vw4Xy$Za6Ab8Bc0Cd2De4Ef6Fg8Gh0Hi2Ij4Jk6Kl8Lm0Mn";
+            }
+        }
+        retry-options {
+            tries-before-disconnect 3;
+            backoff-threshold 1;
+            backoff-factor 6;
+            lockout-period 10;
+        }
+        message "WARNING: Unauthorized access prohibited. All activity monitored and logged.";
+    }
+    services {
+        ssh {
+            root-login deny;
+            protocol-version v2;
+            rate-limit 5;
+            connection-limit 10;
+            max-sessions-per-connection 5;
+        }
+        netconf {
+            ssh;
+        }
+        web-management {
+            https {
+                system-generated-certificate;
+                interface fxp0.0;
+            }
+        }
+    }
+    syslog {
+        user * {
+            any emergency;
+        }
+        host 10.0.0.50 {
+            any notice;
+            authorization info;
+            interactive-commands info;
+            facility-override local7;
+        }
+        file messages {
+            any notice;
+            authorization info;
+        }
+        file interactive-commands {
+            interactive-commands any;
+        }
+        time-format year millisecond;
+    }
+    ntp {
+        authentication-key 1 type md5 value "$9$NtPk3yS1234";
+        server 10.0.0.100 key 1;
+        server 10.0.0.101 key 1;
+    }
+    max-configurations-on-flash 5;
+    no-redirects;
+    no-ping-record-route;
+    no-ping-time-stamp;
+    internet-options {
+        no-source-quench;
+        tcp-drop-synfin-set;
+    }
+}
+snmp {
+    name "SRX-FW-01";
+    location "DC1-Rack15";
+    contact "security@corp.internal";
+    v3 {
+        usm {
+            local-engine {
+                user snmpv3admin {
+                    authentication-sha {
+                        authentication-key "$9$ShA_k3y_v4lu3";
+                    }
+                    privacy-aes128 {
+                        privacy-key "$9$Pr1v_k3y_v4lu3";
+                    }
+                }
+            }
+        }
+        vacm {
+            security-to-group {
+                security-model usm {
+                    security-name snmpv3admin {
+                        group snmpv3group;
+                    }
+                }
+            }
+            access {
+                group snmpv3group {
+                    default-context-prefix {
+                        security-model usm {
+                            security-level privacy {
+                                read-view all;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+security {
+    log {
+        mode stream;
+        source-address 10.1.1.1;
+        stream SIEM {
+            severity info;
+            host {
+                10.0.0.50;
+                port 514;
+            }
+        }
+    }
+    screen {
+        ids-option untrust-screen {
+            icmp {
+                ping-death;
+            }
+            ip {
+                source-route-option;
+                tear-drop;
+            }
+            tcp {
+                syn-flood {
+                    alarm-threshold 1024;
+                    attack-threshold 200;
+                    source-threshold 1024;
+                    destination-threshold 2048;
+                    timeout 20;
+                }
+                land;
+            }
+        }
+    }
+    policies {
+        from-zone trust to-zone untrust {
+            policy allow-web {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application [junos-http junos-https];
+                }
+                then {
+                    permit;
+                    log {
+                        session-close;
+                    }
+                }
+            }
+            policy default-deny {
+                match {
+                    source-address any;
+                    destination-address any;
+                    application any;
+                }
+                then {
+                    deny;
+                    log {
+                        session-init;
+                    }
+                }
+            }
+        }
+    }
+}
+interfaces {
+    ge-0/0/0 {
+        description "UPLINK-TO-CORE";
+        unit 0 {
+            family inet {
+                address 10.1.1.1/24;
+            }
+        }
+    }
+    ge-0/0/1 {
+        description "SERVER-SEGMENT";
+        unit 0 {
+            family inet {
+                address 10.2.1.1/24;
+            }
+        }
+    }
+    ge-0/0/2 {
+        disable;
+    }
+    ge-0/0/3 {
+        disable;
+    }
+    fxp0 {
+        unit 0 {
+            family inet {
+                address 10.0.0.20/24;
+            }
+        }
+    }
+}

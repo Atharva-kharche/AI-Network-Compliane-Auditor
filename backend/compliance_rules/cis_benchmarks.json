@@ -1,0 +1,284 @@
+{
+  "framework": "CIS",
+  "version": "1.0",
+  "description": "CIS Benchmark rules for network device security hardening",
+  "rules": [
+    {
+      "id": "CIS-1.1.1",
+      "name": "Ensure enable secret is set and encrypted",
+      "category": "authentication",
+      "severity": "critical",
+      "check": {
+        "path": "authentication.enable_secret_encrypted",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "enable algorithm-type scrypt secret <password>",
+        "juniper": "set system root-authentication encrypted-password <hash>",
+        "paloalto": "set mgt-config users admin phash <hash>",
+        "generic": "Configure an encrypted enable/root password."
+      }
+    },
+    {
+      "id": "CIS-1.1.2",
+      "name": "Ensure password encryption service is enabled",
+      "category": "encryption",
+      "severity": "high",
+      "check": {
+        "path": "encryption.password_encryption_service",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "service password-encryption",
+        "generic": "Enable the password encryption service to encrypt all stored passwords."
+      }
+    },
+    {
+      "id": "CIS-1.2.1",
+      "name": "Ensure AAA authentication is enabled",
+      "category": "authentication",
+      "severity": "critical",
+      "check": {
+        "path": "authentication.aaa_enabled",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "aaa new-model\naaa authentication login default local",
+        "juniper": "set system authentication-order [password]",
+        "paloalto": "Configured by default in PAN-OS.",
+        "generic": "Enable AAA authentication for all management access."
+      }
+    },
+    {
+      "id": "CIS-1.2.2",
+      "name": "Ensure minimum password length is at least 8 characters",
+      "category": "authentication",
+      "severity": "high",
+      "check": {
+        "path": "authentication.password_min_length",
+        "operator": "greater_than",
+        "expected": 7
+      },
+      "remediation": {
+        "cisco_ios": "security passwords min-length 8",
+        "paloalto": "set password-complexity minimum-length 8",
+        "generic": "Set minimum password length to at least 8 characters."
+      }
+    },
+    {
+      "id": "CIS-1.2.3",
+      "name": "Ensure login attempt limit is configured",
+      "category": "authentication",
+      "severity": "medium",
+      "check": {
+        "path": "authentication.login_attempts_limit",
+        "operator": "exists",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "login block-for 120 attempts 3 within 60",
+        "juniper": "set system login retry-options tries-before-disconnect 3",
+        "paloalto": "set deviceconfig setting management failed-attempts 5",
+        "generic": "Configure login attempt limits to prevent brute-force attacks."
+      }
+    },
+    {
+      "id": "CIS-2.1.1",
+      "name": "Ensure SSH version 2 is used",
+      "category": "remote_access",
+      "severity": "critical",
+      "check": {
+        "path": "remote_access.ssh_version",
+        "operator": "equals",
+        "expected": 2
+      },
+      "remediation": {
+        "cisco_ios": "ip ssh version 2",
+        "juniper": "set system services ssh protocol-version v2",
+        "paloalto": "SSH v2 is the only version supported in PAN-OS.",
+        "generic": "Configure SSH to use version 2 only."
+      }
+    },
+    {
+      "id": "CIS-2.1.2",
+      "name": "Ensure SSH timeout is configured",
+      "category": "remote_access",
+      "severity": "medium",
+      "check": {
+        "path": "remote_access.ssh_timeout",
+        "operator": "exists",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "ip ssh time-out 60",
+        "juniper": "set system services ssh connection-limit 10",
+        "paloalto": "set deviceconfig system ssh session-timeout 10",
+        "generic": "Configure SSH session timeout to prevent idle sessions."
+      }
+    },
+    {
+      "id": "CIS-2.2.1",
+      "name": "Ensure Telnet is disabled",
+      "category": "remote_access",
+      "severity": "critical",
+      "check": {
+        "path": "remote_access.telnet_enabled",
+        "operator": "equals",
+        "expected": false
+      },
+      "remediation": {
+        "cisco_ios": "line vty 0 15\n transport input ssh",
+        "juniper": "delete system services telnet",
+        "paloalto": "set deviceconfig system service disable-telnet yes",
+        "generic": "Disable Telnet and use SSH for all remote management."
+      }
+    },
+    {
+      "id": "CIS-2.3.1",
+      "name": "Ensure VTY access control lists are applied",
+      "category": "remote_access",
+      "severity": "high",
+      "check": {
+        "path": "remote_access.vty_acl_applied",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "line vty 0 15\n access-class MGMT-ACL in",
+        "juniper": "set firewall family inet filter MGMT-FILTER ...",
+        "generic": "Apply access control lists to restrict management access."
+      }
+    },
+    {
+      "id": "CIS-3.1.1",
+      "name": "Ensure logging is enabled with a remote destination",
+      "category": "logging",
+      "severity": "high",
+      "check": {
+        "path": "logging.logging_enabled",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "logging host <syslog-server-ip>",
+        "juniper": "set system syslog host <ip> any notice",
+        "paloalto": "set shared log-settings syslog <name> server <ip>",
+        "generic": "Configure remote syslog logging to a centralized server."
+      }
+    },
+    {
+      "id": "CIS-3.1.2",
+      "name": "Ensure log timestamps are enabled",
+      "category": "logging",
+      "severity": "medium",
+      "check": {
+        "path": "logging.log_timestamps",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "service timestamps log datetime msec",
+        "juniper": "set system syslog time-format year millisecond",
+        "generic": "Enable timestamps on log messages for forensic analysis."
+      }
+    },
+    {
+      "id": "CIS-4.1.1",
+      "name": "Ensure CDP/LLDP is disabled on external interfaces",
+      "category": "services",
+      "severity": "medium",
+      "check": {
+        "path": "services.cdp_enabled",
+        "operator": "equals",
+        "expected": false
+      },
+      "remediation": {
+        "cisco_ios": "no cdp run",
+        "generic": "Disable CDP/LLDP to prevent information disclosure on untrusted interfaces."
+      }
+    },
+    {
+      "id": "CIS-4.1.2",
+      "name": "Ensure HTTP server is disabled",
+      "category": "services",
+      "severity": "high",
+      "check": {
+        "path": "services.http_server_enabled",
+        "operator": "equals",
+        "expected": false
+      },
+      "remediation": {
+        "cisco_ios": "no ip http server\nno ip http secure-server",
+        "generic": "Disable the HTTP management server; use SSH/HTTPS only."
+      }
+    },
+    {
+      "id": "CIS-4.2.1",
+      "name": "Ensure source routing is disabled",
+      "category": "services",
+      "severity": "high",
+      "check": {
+        "path": "services.source_routing_disabled",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "no ip source-route",
+        "juniper": "set system internet-options no-source-quench",
+        "generic": "Disable IP source routing to prevent routing attacks."
+      }
+    },
+    {
+      "id": "CIS-5.1.1",
+      "name": "Ensure NTP authentication is enabled",
+      "category": "ntp",
+      "severity": "medium",
+      "check": {
+        "path": "ntp.ntp_authentication",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "ntp authenticate\nntp authentication-key 1 md5 <key>\nntp trusted-key 1",
+        "juniper": "set system ntp authentication-key 1 type md5 value <key>",
+        "paloalto": "set network ntp-servers primary-ntp-server authentication-type symmetric-key",
+        "generic": "Enable NTP authentication to prevent time-based attacks."
+      }
+    },
+    {
+      "id": "CIS-6.1.1",
+      "name": "Ensure SNMP community strings are not default",
+      "category": "snmp",
+      "severity": "critical",
+      "check": {
+        "path": "snmp.community_string_default",
+        "operator": "equals",
+        "expected": false
+      },
+      "remediation": {
+        "cisco_ios": "no snmp-server community public\nno snmp-server community private\nsnmp-server community <custom-string> RO <acl>",
+        "generic": "Replace default SNMP community strings (public/private) with strong, unique strings."
+      }
+    },
+    {
+      "id": "CIS-7.1.1",
+      "name": "Ensure login banner is configured",
+      "category": "banners",
+      "severity": "medium",
+      "check": {
+        "path": "banners.login_banner_set",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "banner login ^C\nUnauthorized access is prohibited.\n^C",
+        "juniper": "set system login message \"Unauthorized access prohibited.\"",
+        "paloalto": "set deviceconfig system login-banner \"Unauthorized access prohibited.\"",
+        "generic": "Configure a login banner warning against unauthorized access."
+      }
+    }
+  ]
+}

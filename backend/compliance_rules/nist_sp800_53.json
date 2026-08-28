@@ -1,0 +1,157 @@
+{
+  "framework": "NIST",
+  "version": "SP 800-53 Rev 5",
+  "description": "NIST SP 800-53 security controls mapped to network device configurations",
+  "rules": [
+    {
+      "id": "NIST-AC-2",
+      "name": "Account Management — Ensure local user accounts are configured with least privilege",
+      "category": "authentication",
+      "severity": "high",
+      "check": {
+        "path": "authentication.aaa_enabled",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "aaa new-model\naaa authentication login default local",
+        "generic": "Enable centralized authentication and authorization (AAA)."
+      }
+    },
+    {
+      "id": "NIST-AC-7",
+      "name": "Unsuccessful Logon Attempts — Ensure login lockout is configured",
+      "category": "authentication",
+      "severity": "high",
+      "check": {
+        "path": "authentication.login_attempts_limit",
+        "operator": "exists",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "login block-for 120 attempts 3 within 60",
+        "generic": "Configure automatic lockout after repeated failed login attempts."
+      }
+    },
+    {
+      "id": "NIST-AC-17",
+      "name": "Remote Access — Ensure only secure remote access protocols are used",
+      "category": "remote_access",
+      "severity": "critical",
+      "check": {
+        "path": "remote_access.ssh_version",
+        "operator": "equals",
+        "expected": 2
+      },
+      "remediation": {
+        "cisco_ios": "ip ssh version 2\nline vty 0 15\n transport input ssh",
+        "generic": "Use SSH version 2 for all remote management. Disable Telnet."
+      }
+    },
+    {
+      "id": "NIST-AU-2",
+      "name": "Audit Events — Ensure logging is enabled",
+      "category": "logging",
+      "severity": "high",
+      "check": {
+        "path": "logging.logging_enabled",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "logging host <syslog-server>\nlogging trap informational",
+        "generic": "Enable audit logging to a centralized syslog server."
+      }
+    },
+    {
+      "id": "NIST-AU-3",
+      "name": "Content of Audit Records — Ensure log timestamps are enabled",
+      "category": "logging",
+      "severity": "medium",
+      "check": {
+        "path": "logging.log_timestamps",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "service timestamps log datetime msec",
+        "generic": "Include timestamps in all audit records."
+      }
+    },
+    {
+      "id": "NIST-IA-2",
+      "name": "Identification and Authentication — Ensure encrypted passwords",
+      "category": "encryption",
+      "severity": "critical",
+      "check": {
+        "path": "encryption.password_encryption_service",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "service password-encryption",
+        "generic": "Enable password encryption to protect stored credentials."
+      }
+    },
+    {
+      "id": "NIST-IA-5",
+      "name": "Authenticator Management — Ensure password complexity",
+      "category": "authentication",
+      "severity": "high",
+      "check": {
+        "path": "authentication.password_min_length",
+        "operator": "greater_than",
+        "expected": 7
+      },
+      "remediation": {
+        "cisco_ios": "security passwords min-length 8",
+        "generic": "Set minimum password length to at least 8 characters."
+      }
+    },
+    {
+      "id": "NIST-SC-8",
+      "name": "Transmission Confidentiality — Ensure Telnet is disabled",
+      "category": "remote_access",
+      "severity": "critical",
+      "check": {
+        "path": "remote_access.telnet_enabled",
+        "operator": "equals",
+        "expected": false
+      },
+      "remediation": {
+        "cisco_ios": "line vty 0 15\n transport input ssh",
+        "generic": "Disable Telnet to protect transmission confidentiality."
+      }
+    },
+    {
+      "id": "NIST-SC-13",
+      "name": "Cryptographic Protection — Ensure SNMPv3 is used",
+      "category": "snmp",
+      "severity": "high",
+      "check": {
+        "path": "snmp.snmp_version",
+        "operator": "equals",
+        "expected": 3
+      },
+      "remediation": {
+        "cisco_ios": "snmp-server group SNMPV3GRP v3 priv\nsnmp-server user <user> SNMPV3GRP v3 auth sha <key> priv aes 256 <key>",
+        "generic": "Migrate to SNMPv3 with authentication and encryption."
+      }
+    },
+    {
+      "id": "NIST-CM-7",
+      "name": "Least Functionality — Ensure unnecessary services are disabled",
+      "category": "services",
+      "severity": "medium",
+      "check": {
+        "path": "services.http_server_enabled",
+        "operator": "equals",
+        "expected": false
+      },
+      "remediation": {
+        "cisco_ios": "no ip http server\nno ip http secure-server",
+        "generic": "Disable all unnecessary services (HTTP, finger, CDP)."
+      }
+    }
+  ]
+}

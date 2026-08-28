@@ -1,0 +1,78 @@
+! Arista EOS Configuration — ARISTA-SW-01
+! Model: DCS-7280SR-48C6
+! EOS Version: 4.28.3M
+! Serial: SSJ17290127
+!
+hostname ARISTA-SW-01
+!
+spanning-tree mode mstp
+!
+aaa authentication login default local
+aaa authorization exec default local
+!
+username admin privilege 15 role network-admin secret sha512 $6$Qr5St7Uv$9Wx1Yz3Ab5Cd7Ef9Gh1Ij3Kl5Mn7Op9QrSt
+username monitor privilege 1 role network-operator secret sha512 $6$Tu2Vw4Xy$Za6Ab8Bc0Cd2De4Ef6Fg8GhHi
+!
+management api http-commands
+   no shutdown
+!
+management ssh
+   idle-timeout 15
+   authentication mode password
+   login timeout 120
+   no shutdown
+!
+no ip http server
+!
+service password-encryption
+!
+ip ssh version 2
+ip ssh timeout 60
+!
+logging host 10.0.0.50
+logging trap informational
+logging buffered 32768
+logging console critical
+logging format timestamp high-resolution
+!
+ntp server 10.0.0.100
+ntp server 10.0.0.101
+!
+snmp-server community public RO
+snmp-server community private RW
+!
+banner login
+WARNING: Unauthorized access is prohibited.
+All sessions are monitored and recorded.
+EOF
+!
+banner motd
+ARISTA-SW-01 — Authorized Users Only
+EOF
+!
+interface Ethernet1
+   description UPLINK-SPINE-01
+   no switchport
+   ip address 10.1.1.2/30
+!
+interface Ethernet2
+   description UPLINK-SPINE-02
+   no switchport
+   ip address 10.1.2.2/30
+!
+interface Ethernet3
+   description SERVER-RACK-01
+   switchport access vlan 100
+!
+interface Ethernet4
+   shutdown
+!
+interface Ethernet5
+   shutdown
+!
+interface Management1
+   ip address 10.0.0.30/24
+!
+ip route 0.0.0.0/0 10.0.0.1
+!
+end

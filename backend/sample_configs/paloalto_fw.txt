@@ -1,0 +1,65 @@
+set deviceconfig system hostname PA-FW-01
+set deviceconfig system type static
+set deviceconfig system ip-address 10.0.0.10
+set deviceconfig system netmask 255.255.255.0
+set deviceconfig system default-gateway 10.0.0.1
+set deviceconfig system dns-setting servers primary 8.8.8.8
+set deviceconfig system dns-setting servers secondary 8.8.4.4
+set deviceconfig system timezone US/Eastern
+set deviceconfig system login-banner "WARNING: Unauthorized access is prohibited. All activity is monitored."
+set deviceconfig system motd-and-banner-header "PA-FW-01 — Authorized Access Only"
+
+set deviceconfig system ssh session-timeout 10
+set deviceconfig system ssh max-sessions 5
+
+set deviceconfig setting management idle-timeout 10
+set deviceconfig setting management enable-log-high-dp-load yes
+set deviceconfig setting wildfire file-size-limit 10
+
+set mgt-config users admin phash $5$rounds=1000$VzG7Y8b1$WkP9Dq4RxHm2LfA3eN5sT7uY0iO1pB2rC4dE6fG8
+set mgt-config users admin permissions role-based superuser yes
+set mgt-config users readonly phash $5$rounds=1000$Ka3Lb4Mc$5nO6pQ7rS8tU9vW0xY1zA2bC3dE4fG5hI6jK7
+set mgt-config users readonly permissions role-based superreader yes
+
+set deviceconfig system service disable-telnet yes
+set deviceconfig system service disable-http yes
+set deviceconfig system service disable-https no
+
+set network profiles zone-protection-profile default
+set network profiles zone-protection-profile strict discard-overlapping-tcp-segment-mismatch yes
+set network profiles zone-protection-profile strict tcp-reject-non-syn yes
+
+set shared log-settings syslog SIEM-SERVER server 10.0.0.50
+set shared log-settings syslog SIEM-SERVER transport UDP
+set shared log-settings syslog SIEM-SERVER port 514
+set shared log-settings syslog SIEM-SERVER format BSD
+set shared log-settings syslog SIEM-SERVER facility LOG_USER
+
+set deviceconfig setting config rematch yes
+set deviceconfig setting config audit-comment-on-policies yes
+
+set network ntp-servers primary-ntp-server ntp-server-address 10.0.0.100
+set network ntp-servers primary-ntp-server authentication-type symmetric-key key-id 1
+set network ntp-servers secondary-ntp-server ntp-server-address 10.0.0.101
+
+set deviceconfig system snmp-setting access-setting version v3
+set deviceconfig system snmp-setting access-setting snmpv3 views view1 oid 1.3.6.1
+set deviceconfig system snmp-setting snmp-system contact "security@company.com"
+set deviceconfig system snmp-setting snmp-system location "DC1-Rack42"
+
+set rulebase security rules DENY-ALL from any to any application any action deny log-start yes
+set rulebase security rules ALLOW-DNS from trust to untrust application dns action allow
+set rulebase security rules ALLOW-WEB from trust to untrust application ssl web-browsing action allow log-end yes
+
+set password-complexity enabled yes
+set password-complexity minimum-length 12
+set password-complexity minimum-uppercase-letters 1
+set password-complexity minimum-lowercase-letters 1
+set password-complexity minimum-numeric-letters 1
+set password-complexity minimum-special-characters 1
+set password-complexity password-history-count 24
+set password-complexity new-password-differs-by-characters 3
+
+set deviceconfig setting management api-key-lifetime 525600
+set deviceconfig setting management failed-attempts 5
+set deviceconfig setting management lockout-time 30

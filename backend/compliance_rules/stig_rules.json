@@ -1,0 +1,158 @@
+{
+  "framework": "STIG",
+  "version": "Network STIG V2R7",
+  "description": "DISA STIG rules for network device hardening",
+  "rules": [
+    {
+      "id": "STIG-NET-0230",
+      "name": "Ensure SSH version 2 is enforced",
+      "category": "remote_access",
+      "severity": "critical",
+      "check": {
+        "path": "remote_access.ssh_version",
+        "operator": "equals",
+        "expected": 2
+      },
+      "remediation": {
+        "cisco_ios": "ip ssh version 2",
+        "generic": "Configure SSH to only allow version 2 connections."
+      }
+    },
+    {
+      "id": "STIG-NET-0340",
+      "name": "Ensure session timeout is configured for management connections",
+      "category": "remote_access",
+      "severity": "medium",
+      "check": {
+        "path": "remote_access.ssh_timeout",
+        "operator": "exists",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "line vty 0 15\n exec-timeout 10 0",
+        "generic": "Configure session timeout for all management connections."
+      }
+    },
+    {
+      "id": "STIG-NET-0400",
+      "name": "Ensure access control lists restrict management access",
+      "category": "access_control",
+      "severity": "high",
+      "check": {
+        "path": "remote_access.vty_acl_applied",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "ip access-list extended MGMT-ACL\n permit ip <trusted-net> any\n deny ip any any log\nline vty 0 15\n access-class MGMT-ACL in",
+        "generic": "Apply ACLs to restrict management plane access to authorized networks."
+      }
+    },
+    {
+      "id": "STIG-NET-0580",
+      "name": "Ensure password encryption is enabled",
+      "category": "encryption",
+      "severity": "high",
+      "check": {
+        "path": "encryption.password_encryption_service",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "service password-encryption",
+        "generic": "Enable password encryption service."
+      }
+    },
+    {
+      "id": "STIG-NET-0600",
+      "name": "Ensure unused interfaces are administratively shutdown",
+      "category": "access_control",
+      "severity": "medium",
+      "check": {
+        "path": "access_control.unused_ports_shutdown",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "interface <interface>\n shutdown",
+        "juniper": "set interfaces <interface> disable",
+        "generic": "Administratively disable all unused network interfaces."
+      }
+    },
+    {
+      "id": "STIG-NET-0700",
+      "name": "Ensure syslog logging to a remote server is configured",
+      "category": "logging",
+      "severity": "high",
+      "check": {
+        "path": "logging.log_destination",
+        "operator": "exists",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "logging host <syslog-server-ip>\nlogging trap informational",
+        "generic": "Configure remote syslog to a centralized log management server."
+      }
+    },
+    {
+      "id": "STIG-NET-0750",
+      "name": "Ensure NTP is configured with authentication",
+      "category": "ntp",
+      "severity": "medium",
+      "check": {
+        "path": "ntp.ntp_authentication",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "ntp authenticate\nntp authentication-key 1 md5 <key>",
+        "generic": "Configure NTP with authentication to prevent time manipulation."
+      }
+    },
+    {
+      "id": "STIG-NET-0810",
+      "name": "Ensure login warning banner is displayed",
+      "category": "banners",
+      "severity": "low",
+      "check": {
+        "path": "banners.login_banner_set",
+        "operator": "equals",
+        "expected": true
+      },
+      "remediation": {
+        "cisco_ios": "banner login ^C\nYou are accessing a U.S. Government information system...\n^C",
+        "generic": "Configure a DoD-approved warning banner on all management interfaces."
+      }
+    },
+    {
+      "id": "STIG-NET-0900",
+      "name": "Ensure SNMP uses version 3 with privacy",
+      "category": "snmp",
+      "severity": "high",
+      "check": {
+        "path": "snmp.snmp_version",
+        "operator": "equals",
+        "expected": 3
+      },
+      "remediation": {
+        "cisco_ios": "snmp-server group SNMPV3GRP v3 priv\nsnmp-server user <user> SNMPV3GRP v3 auth sha <auth-key> priv aes 256 <priv-key>",
+        "generic": "Configure SNMPv3 with authentication and AES-256 encryption."
+      }
+    },
+    {
+      "id": "STIG-NET-0950",
+      "name": "Ensure default SNMP community strings are removed",
+      "category": "snmp",
+      "severity": "critical",
+      "check": {
+        "path": "snmp.community_string_default",
+        "operator": "equals",
+        "expected": false
+      },
+      "remediation": {
+        "cisco_ios": "no snmp-server community public\nno snmp-server community private",
+        "generic": "Remove default SNMP community strings (public/private)."
+      }
+    }
+  ]
+}

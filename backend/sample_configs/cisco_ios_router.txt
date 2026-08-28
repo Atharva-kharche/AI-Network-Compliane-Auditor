@@ -1,0 +1,115 @@
+!
+! Cisco IOS Router Configuration — CORE-RTR-01
+! Model: ISR4451/K9
+! IOS Version: 15.7(3)M6
+! Serial: FDO2145R0PL
+!
+version 15.7
+service timestamps debug datetime msec
+service timestamps log datetime msec
+service password-encryption
+!
+hostname CORE-RTR-01
+!
+boot-start-marker
+boot-end-marker
+!
+enable secret 9 $9$Yw5FMp1vIb0d8k$LmR2q5HjGhTzA6bXnPcKdOyR7s
+!
+aaa new-model
+aaa authentication login default local
+aaa authorization exec default local
+aaa accounting exec default start-stop group tacacs+
+!
+no ip source-route
+no ip finger
+no ip http server
+no ip http secure-server
+no service finger
+no service pad
+no service udp-small-servers
+no service tcp-small-servers
+!
+ip ssh version 2
+ip ssh time-out 60
+ip ssh authentication-retries 3
+!
+username admin privilege 15 secret 9 $9$A1bC2dE3fG4h$Xk9mNpQrStUvWxYz
+username readonly privilege 1 secret 9 $9$Z7yX6wV5uT4s$RqPo3Nm2Lk1Jh0Gf
+!
+login block-for 120 attempts 3 within 60
+security passwords min-length 10
+!
+crypto key generate rsa modulus 2048
+!
+ip access-list extended MGMT-ACL
+ permit ip 10.0.0.0 0.0.0.255 any
+ permit ip 192.168.1.0 0.0.0.255 any
+ deny ip any any log
+!
+line con 0
+ exec-timeout 5 0
+ login authentication default
+ transport input none
+!
+line vty 0 4
+ exec-timeout 10 0
+ access-class MGMT-ACL in
+ login authentication default
+ transport input ssh
+ transport output ssh
+!
+line vty 5 15
+ exec-timeout 10 0
+ access-class MGMT-ACL in
+ login authentication default
+ transport input ssh
+!
+ntp authenticate
+ntp authentication-key 1 md5 NTPsecretKey123
+ntp trusted-key 1
+ntp server 10.0.0.100 key 1
+ntp server 10.0.0.101 key 1
+!
+logging buffered 16384 informational
+logging host 10.0.0.50
+logging trap informational
+logging source-interface Loopback0
+!
+snmp-server community R34dOnly RO MGMT-ACL
+snmp-server group SNMPV3GROUP v3 priv
+snmp-server user snmpv3admin SNMPV3GROUP v3 auth sha AuthP@ss priv aes 256 PrivP@ss
+!
+no cdp run
+!
+banner login ^C
+*************************************************************
+UNAUTHORIZED ACCESS TO THIS DEVICE IS PROHIBITED.
+All access is logged and monitored. Violators will be
+prosecuted to the fullest extent of the law.
+*************************************************************
+^C
+!
+banner motd ^C
+=== CORE-RTR-01 — Authorized Personnel Only ===
+^C
+!
+interface GigabitEthernet0/0
+ description UPLINK-TO-CORE-SW
+ ip address 10.1.1.1 255.255.255.0
+ no shutdown
+!
+interface GigabitEthernet0/1
+ description SERVER-LAN
+ ip address 10.2.1.1 255.255.255.0
+ no shutdown
+!
+interface GigabitEthernet0/2
+ shutdown
+!
+interface GigabitEthernet0/3
+ shutdown
+!
+ip route 0.0.0.0 0.0.0.0 10.1.1.254
+!
+end

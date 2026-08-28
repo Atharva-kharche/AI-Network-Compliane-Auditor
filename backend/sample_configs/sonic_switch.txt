@@ -1,0 +1,98 @@
+{
+    "DEVICE_METADATA": {
+        "localhost": {
+            "hostname": "SONIC-SW-01",
+            "platform": "x86_64-mlnx_msn2700-r0",
+            "mac": "b8:6a:97:e1:3f:40",
+            "hwsku": "Mellanox-SN2700",
+            "type": "LeafRouter",
+            "sonic_version": "SONiC.20230531.01"
+        }
+    },
+    "LOOPBACK_INTERFACE": {
+        "Loopback0|10.10.10.1/32": {}
+    },
+    "NTP_SERVER": {
+        "10.0.0.100": {},
+        "10.0.0.101": {}
+    },
+    "SYSLOG_SERVER": {
+        "10.0.0.50": {}
+    },
+    "AAA": {
+        "authentication": {
+            "login": "local"
+        }
+    },
+    "TACPLUS_SERVER": {
+        "10.0.0.60": {
+            "priority": "1",
+            "tcp_port": "49",
+            "timeout": "5"
+        }
+    },
+    "SSH_SERVER": {
+        "POLICIES": {
+            "max_sessions": "10",
+            "inactivity_timeout": "300",
+            "login_timeout": "120"
+        }
+    },
+    "ACL_RULE": {
+        "MGMT_ACL|RULE_10": {
+            "SRC_IP": "10.0.0.0/24",
+            "PACKET_ACTION": "FORWARD",
+            "PRIORITY": "10"
+        },
+        "MGMT_ACL|RULE_99": {
+            "SRC_IP": "0.0.0.0/0",
+            "PACKET_ACTION": "DROP",
+            "PRIORITY": "99"
+        }
+    },
+    "SNMP_COMMUNITY": {
+        "public": {
+            "TYPE": "RO"
+        }
+    },
+    "PORT": {
+        "Ethernet0": {
+            "admin_status": "up",
+            "description": "UPLINK-SPINE",
+            "speed": "100000"
+        },
+        "Ethernet4": {
+            "admin_status": "up",
+            "description": "SERVER-01",
+            "speed": "25000"
+        },
+        "Ethernet8": {
+            "admin_status": "down",
+            "description": "UNUSED",
+            "speed": "25000"
+        },
+        "Ethernet12": {
+            "admin_status": "down",
+            "description": "UNUSED",
+            "speed": "25000"
+        }
+    },
+    "BGP_NEIGHBOR": {
+        "10.1.1.1": {
+            "asn": "65001",
+            "holdtime": "180",
+            "keepalive": "60",
+            "name": "SPINE-01",
+            "admin_status": "true"
+        }
+    },
+    "BANNER": {
+        "login": "WARNING: Unauthorized access prohibited. Activity monitored.",
+        "motd": "SONIC-SW-01 — SONiC Network OS"
+    },
+    "MGMT_INTERFACE": {
+        "eth0|10.0.0.40/24": {
+            "gwaddr": "10.0.0.1"
+        }
+    }
+}
