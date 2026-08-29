@@ -11,10 +11,5 @@
       "runtime": "@vercel/python@4.5.0",
       "maxDuration": 60
     }
-  },
-  "build": {
-    "env": {
-      "PYTHON_VERSION": "3.12"
-    }
   }
 }
