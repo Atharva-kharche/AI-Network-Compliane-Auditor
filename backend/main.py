@@ -47,10 +47,22 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# CORS — allow the React frontend in development
+# CORS — allow the React frontend in dev + deployed origins
+_default_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+]
+# Add any extra origins from the CORS_ORIGINS env var (comma-separated)
+if settings.CORS_ORIGINS:
+    _default_origins.extend(
+        origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()
+    )
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173"],
+    allow_origins=_default_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",  # All Vercel preview deployments
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
