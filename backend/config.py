@@ -6,10 +6,11 @@ from pydantic_settings import BaseSettings
 
 BASE_DIR = Path(__file__).resolve().parent
 
-# Vercel serverless: only /tmp is writable
+# Vercel serverless or Render: only /tmp is reliably writable across ephemeral environments
 IS_VERCEL = bool(os.environ.get("VERCEL"))
+IS_RENDER = bool(os.environ.get("RENDER"))
 
-if IS_VERCEL:
+if IS_VERCEL or IS_RENDER:
     _data_dir = Path("/tmp") / "app_data"
 else:
     _data_dir = BASE_DIR / "data"
@@ -35,6 +36,7 @@ class Settings(BaseSettings):
 
     # CORS — additional origins (comma-separated) for deployed frontends
     CORS_ORIGINS: str = ""
+    FRONTEND_URL: str = ""
 
     class Config:
         env_file = BASE_DIR / ".env"

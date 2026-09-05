@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: netaudit-ai-backend
+    env: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.8
+      - key: FRONTEND_URL
+        value: "" # Update this after Vercel deployment
+      - key: GEMINI_API_KEY
+        sync: false # User must set this manually in Render dashboard

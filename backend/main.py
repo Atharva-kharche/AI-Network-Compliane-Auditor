@@ -58,6 +58,8 @@ if settings.CORS_ORIGINS:
     _default_origins.extend(
         origin.strip() for origin in settings.CORS_ORIGINS.split(",") if origin.strip()
     )
+if settings.FRONTEND_URL:
+    _default_origins.append(settings.FRONTEND_URL.strip())
 
 app.add_middleware(
     CORSMiddleware,
