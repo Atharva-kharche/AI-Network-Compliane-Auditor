@@ -1,8 +1,8 @@
 """Pydantic schemas for device & config endpoints."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class DeviceRead(BaseModel):
@@ -19,6 +19,12 @@ class DeviceRead(BaseModel):
     class Config:
         from_attributes = True
 
+    @model_validator(mode='after')
+    def _ensure_utc(self):
+        if self.uploaded_at and self.uploaded_at.tzinfo is None:
+            self.uploaded_at = self.uploaded_at.replace(tzinfo=timezone.utc)
+        return self
+
 
 class ConfigFileRead(BaseModel):
     """Response schema for a config file record."""
@@ -33,6 +39,12 @@ class ConfigFileRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+    @model_validator(mode='after')
+    def _ensure_utc(self):
+        if self.created_at and self.created_at.tzinfo is None:
+            self.created_at = self.created_at.replace(tzinfo=timezone.utc)
+        return self
 
 
 class DeviceDetailRead(BaseModel):
@@ -49,6 +61,12 @@ class DeviceDetailRead(BaseModel):
 
     class Config:
         from_attributes = True
+
+    @model_validator(mode='after')
+    def _ensure_utc(self):
+        if self.uploaded_at and self.uploaded_at.tzinfo is None:
+            self.uploaded_at = self.uploaded_at.replace(tzinfo=timezone.utc)
+        return self
 
 
 class UploadResponse(BaseModel):

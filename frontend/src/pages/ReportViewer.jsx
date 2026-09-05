@@ -1,21 +1,37 @@
 import { useState, useEffect } from 'react'
-import { FileText, Download, Server } from 'lucide-react'
-import { listReports, getReportDownloadUrl } from '../services/api'
+import { FileText, Download, RefreshCw } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { listReports, generateReport, getReportDownloadUrl } from '../services/api'
 
 export default function ReportViewer() {
   const [reports, setReports] = useState([])
   const [loading, setLoading] = useState(true)
+  const [generatingId, setGeneratingId] = useState(null)
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const data = await listReports()
-        setReports(data)
-      } catch { /* empty */ }
-      setLoading(false)
+  const loadReports = async () => {
+    try {
+      const data = await listReports()
+      setReports(data)
+    } catch { /* empty */ }
+    setLoading(false)
+  }
+
+  useEffect(() => { loadReports() }, [])
+
+  const handleGeneratePdf = async (report) => {
+    setGeneratingId(report.id)
+    try {
+      const updated = await generateReport(report.device_id, report.framework)
+      toast.success('PDF report generated!')
+      // Trigger download
+      window.open(getReportDownloadUrl(updated.id), '_blank')
+      // Refresh reports list to update pdf_path
+      await loadReports()
+    } catch (err) {
+      toast.error(err.response?.data?.detail || 'Report generation failed')
     }
-    load()
-  }, [])
+    setGeneratingId(null)
+  }
 
   if (loading) {
     return <div className="loading-overlay"><div className="spinner" /> Loading reports…</div>
@@ -60,13 +76,14 @@ export default function ReportViewer() {
                   r.compliance_score >= 80 ? 'var(--color-success)' :
                   r.compliance_score >= 50 ? 'var(--color-warning)' :
                   'var(--color-danger)'
+                const isGenerating = generatingId === r.id
 
                 return (
                   <tr key={r.id}>
                     <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>#{r.id}</td>
                     <td>
                       <span style={{ color: 'var(--accent-light)', fontWeight: 600 }}>
-                        Device #{r.device_id}
+                        {r.device_hostname || `Device #${r.device_id}`}
                       </span>
                     </td>
                     <td>
@@ -84,7 +101,7 @@ export default function ReportViewer() {
                       <span style={{ color: 'var(--text-tertiary)', fontSize: 11 }}> ({r.total_rules} total)</span>
                     </td>
                     <td style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                      {new Date(r.generated_at).toLocaleString()}
+                      {new Date(r.generated_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
                     </td>
                     <td>
                       {r.pdf_path ? (
@@ -94,10 +111,20 @@ export default function ReportViewer() {
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          <Download size={14} /> Download
+                          <Download size={14} /> Download PDF
                         </a>
                       ) : (
-                        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>No PDF</span>
+                        <button
+                          className="btn btn-secondary btn-sm"
+                          onClick={() => handleGeneratePdf(r)}
+                          disabled={isGenerating}
+                        >
+                          {isGenerating ? (
+                            <><RefreshCw size={14} className="spin" /> Generating…</>
+                          ) : (
+                            <><FileText size={14} /> Generate PDF</>
+                          )}
+                        </button>
                       )}
                     </td>
                   </tr>

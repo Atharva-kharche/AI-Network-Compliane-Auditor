@@ -97,6 +97,18 @@ export async function deleteMapping(mappingId) {
   return data
 }
 
+export async function loadDemoUnknownConfig() {
+  const { data } = await api.post('/training/demo/load')
+  return data
+}
+
+export async function reAuditDevice(deviceId, framework = 'CIS') {
+  const { data } = await api.post(`/training/re-audit/${deviceId}`, null, {
+    params: { framework },
+  })
+  return data
+}
+
 // ─── Reports ───────────────────────────────────────────────
 export async function generateReport(deviceId, framework = 'CIS') {
   const { data } = await api.post(`/reports/generate/${deviceId}`, null, {

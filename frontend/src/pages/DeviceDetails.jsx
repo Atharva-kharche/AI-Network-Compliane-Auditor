@@ -138,7 +138,7 @@ export default function DeviceDetails() {
             ['OS Version', device.os_version],
             ['Serial Number', device.serial_number],
             ['Device Type', device.device_type],
-            ['Uploaded', new Date(device.uploaded_at).toLocaleString()],
+            ['Uploaded', new Date(device.uploaded_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })],
             ['Config File', config?.filename],
           ].map(([label, value]) => (
             <div key={label}>

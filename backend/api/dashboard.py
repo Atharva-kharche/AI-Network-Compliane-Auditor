@@ -1,5 +1,7 @@
 """Dashboard API — aggregate statistics and risk distribution endpoints."""
 
+from datetime import timezone as _tz
+
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, select, func
 
@@ -44,33 +46,53 @@ def get_dashboard_stats(session: Session = Depends(get_session)):
         )
     ).one()
 
-    # Recent activity — last 10 items
+    # Recent activity & audits from actual DB records
     recent_devices = session.exec(
         select(Device).order_by(Device.uploaded_at.desc()).limit(5)
     ).all()
     recent_reports = session.exec(
-        select(AuditReport).order_by(AuditReport.generated_at.desc()).limit(5)
+        select(AuditReport).order_by(AuditReport.generated_at.desc()).limit(10)
     ).all()
+
+    recent_audits = []
+    for r in recent_reports:
+        device = session.get(Device, r.device_id)
+        hostname = device.hostname if device else f"Device #{r.device_id}"
+        vendor = device.vendor if device else "unknown"
+        recent_audits.append({
+            "report_id": r.id,
+            "device_id": r.device_id,
+            "name": hostname,
+            "hostname": hostname,
+            "vendor": vendor,
+            "framework": r.framework,
+            "score": r.compliance_score,
+            "passed": r.passed,
+            "failed": r.failed,
+            "warnings": r.warnings,
+            "total_rules": r.total_rules,
+            "timestamp": r.generated_at.replace(tzinfo=_tz.utc).isoformat(),
+        })
 
     activity = []
     for d in recent_devices:
         activity.append({
             "type": "upload",
             "description": f"Uploaded {d.hostname} ({d.vendor})",
-            "timestamp": d.uploaded_at.isoformat(),
+            "timestamp": d.uploaded_at.replace(tzinfo=_tz.utc).isoformat(),
             "device_id": d.id,
         })
-    for r in recent_reports:
+    for r in recent_reports[:5]:
         device = session.get(Device, r.device_id)
-        hostname = device.hostname if device else "Unknown"
+        hostname = device.hostname if device else f"Device #{r.device_id}"
         activity.append({
             "type": "audit",
             "description": f"Audited {hostname} — {r.framework} ({r.compliance_score}%)",
-            "timestamp": r.generated_at.isoformat(),
+            "timestamp": r.generated_at.replace(tzinfo=_tz.utc).isoformat(),
             "device_id": r.device_id,
         })
 
-    # Sort by timestamp descending
+    # Sort activity by timestamp descending
     activity.sort(key=lambda x: x["timestamp"], reverse=True)
 
     return DashboardStats(
@@ -80,6 +102,7 @@ def get_dashboard_stats(session: Session = Depends(get_session)):
         critical_findings=critical_findings,
         high_findings=high_findings,
         devices_audited=devices_audited,
+        recent_audits=recent_audits,
         recent_activity=activity[:10],
     )
 

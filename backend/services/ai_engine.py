@@ -215,8 +215,15 @@ def _mock_ai_response(raw_config: str, vendor: str) -> tuple[dict, list[dict]]:
         schema["banners"]["login_banner_set"] = True
         schema["banners"]["motd_banner_set"] = True
 
-    # SSH
-    if "ssh" in config_lower or "SSH_SERVER" in raw_config:
-        schema["remote_access"]["ssh_version"] = 2
+    # Detect unrecognized security commands that need training
+    from services.normalizer import detect_unrecognized_lines
+    uncertain = detect_unrecognized_lines(raw_config, vendor)
+
+    # For unknown vendors (like Fortinet and QuantumGuard), only set basic metadata and banners/destinations,
+    # but leave uncertain commands (like SSH version, telnet, timeouts, password encryption)
+    # for the training pipeline to demonstrate the learning loop!
+    if vendor not in ("fortinet", "quantumguard", "unknown"):
+        if "ssh" in config_lower or "SSH_SERVER" in raw_config:
+            schema["remote_access"]["ssh_version"] = 2
 
     return schema, uncertain

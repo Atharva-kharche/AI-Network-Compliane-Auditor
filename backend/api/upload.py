@@ -11,8 +11,9 @@ from database import get_session
 from models.device import Device, ConfigFile
 from schemas.device import DeviceRead, ConfigFileRead, UploadResponse, DeviceDetailRead
 from services import extract_device_info
-from services.normalizer import normalize_config
+from services.normalizer import normalize_config, apply_verified_mappings
 from services.ai_engine import parse_config_with_ai
+from models.training import TrainingMapping
 from config import settings
 
 router = APIRouter(prefix="/api/v1", tags=["Upload & Devices"])
@@ -67,13 +68,23 @@ async def upload_config(
         raw_content, device_info["vendor"], device_info
     )
 
-    # If the vendor is unknown, try AI parsing
+    queued_items = 0
+
+    # If the vendor is unknown or needs AI, try AI parsing / unknown command detection
     if parse_status == "needs_ai":
+        # Get existing verified mappings for few-shot prompt
+        verified_stmt = select(TrainingMapping).where(
+            TrainingMapping.vendor == device_info["vendor"],
+            TrainingMapping.is_verified == True,
+        )
+        verified_mappings = [
+            m.model_dump() for m in session.exec(verified_stmt).all()
+        ]
+
         ai_result, uncertain = await parse_config_with_ai(
-            raw_content, device_info["vendor"]
+            raw_content, device_info["vendor"], verified_mappings
         )
         if ai_result:
-            # Merge AI results (they may have filled in fields)
             for section_key, section_val in ai_result.items():
                 if isinstance(section_val, dict) and section_key in normalized:
                     for k, v in section_val.items():
@@ -82,19 +93,55 @@ async def upload_config(
                 elif section_key not in ("uncertain", "device"):
                     normalized[section_key] = section_val
 
-            parse_status = "parsed" if not uncertain else "needs_training"
+        # Handle uncertain / unrecognized lines
+        if uncertain:
+            for item in uncertain:
+                raw_cmd = item.get("raw_line", "").strip()
+                if not raw_cmd:
+                    continue
 
-            # Store uncertain items in training queue
-            if uncertain:
-                from models.training import TrainingMapping
-                for item in uncertain:
+                # Check if this command is already verified
+                existing_verified = session.exec(
+                    select(TrainingMapping).where(
+                        TrainingMapping.vendor == device_info["vendor"],
+                        TrainingMapping.raw_command == raw_cmd,
+                        TrainingMapping.is_verified == True,
+                    )
+                ).first()
+
+                if existing_verified:
+                    continue  # Already learned, no need to queue
+
+                # Check if it is already in pending queue
+                existing_pending = session.exec(
+                    select(TrainingMapping).where(
+                        TrainingMapping.vendor == device_info["vendor"],
+                        TrainingMapping.raw_command == raw_cmd,
+                        TrainingMapping.is_verified == False,
+                    )
+                ).first()
+
+                if not existing_pending:
                     mapping = TrainingMapping(
                         vendor=device_info["vendor"],
-                        config_id=None,  # Will be set after config is saved
-                        raw_command=item.get("raw_line", ""),
+                        config_id=None,  # Will update after saving config
+                        raw_command=raw_cmd,
+                        context_lines=item.get("context", ""),
+                        security_category=item.get("category"),
+                        normalized_key=item.get("best_guess_key"),
+                        normalized_value=str(item.get("best_guess_value", "")) if item.get("best_guess_value") is not None else None,
                         ai_suggestion=json.dumps(item),
+                        is_verified=False,
                     )
                     session.add(mapping)
+                    queued_items += 1
+                else:
+                    queued_items += 1
+
+    # Overlay any verified mappings onto normalized config
+    normalized = apply_verified_mappings(normalized, device_info["vendor"], session)
+
+    parse_status = "needs_training" if queued_items > 0 else "parsed"
 
     # Create ConfigFile record
     config_file = ConfigFile(
@@ -109,9 +156,8 @@ async def upload_config(
     session.commit()
     session.refresh(config_file)
 
-    # Update training mappings with config_id if any were created
-    if parse_status == "needs_training":
-        from models.training import TrainingMapping
+    # Associate unassigned pending training items with this config_id
+    if queued_items > 0:
         stmt = select(TrainingMapping).where(
             TrainingMapping.config_id == None,
             TrainingMapping.vendor == device_info["vendor"],
@@ -170,9 +216,19 @@ async def upload_bulk(
             raw_content, device_info["vendor"], device_info
         )
 
+        queued_items = 0
+
         if parse_status == "needs_ai":
+            verified_stmt = select(TrainingMapping).where(
+                TrainingMapping.vendor == device_info["vendor"],
+                TrainingMapping.is_verified == True,
+            )
+            verified_mappings = [
+                m.model_dump() for m in session.exec(verified_stmt).all()
+            ]
+
             ai_result, uncertain = await parse_config_with_ai(
-                raw_content, device_info["vendor"]
+                raw_content, device_info["vendor"], verified_mappings
             )
             if ai_result:
                 for section_key, section_val in ai_result.items():
@@ -180,7 +236,53 @@ async def upload_bulk(
                         for k, v in section_val.items():
                             if v is not None:
                                 normalized[section_key][k] = v
-                parse_status = "parsed" if not uncertain else "needs_training"
+                    elif section_key not in ("uncertain", "device"):
+                        normalized[section_key] = section_val
+
+            if uncertain:
+                for item in uncertain:
+                    raw_cmd = item.get("raw_line", "").strip()
+                    if not raw_cmd:
+                        continue
+
+                    existing_verified = session.exec(
+                        select(TrainingMapping).where(
+                            TrainingMapping.vendor == device_info["vendor"],
+                            TrainingMapping.raw_command == raw_cmd,
+                            TrainingMapping.is_verified == True,
+                        )
+                    ).first()
+
+                    if existing_verified:
+                        continue
+
+                    existing_pending = session.exec(
+                        select(TrainingMapping).where(
+                            TrainingMapping.vendor == device_info["vendor"],
+                            TrainingMapping.raw_command == raw_cmd,
+                            TrainingMapping.is_verified == False,
+                        )
+                    ).first()
+
+                    if not existing_pending:
+                        mapping = TrainingMapping(
+                            vendor=device_info["vendor"],
+                            config_id=None,
+                            raw_command=raw_cmd,
+                            context_lines=item.get("context", ""),
+                            security_category=item.get("category"),
+                            normalized_key=item.get("best_guess_key"),
+                            normalized_value=str(item.get("best_guess_value", "")) if item.get("best_guess_value") is not None else None,
+                            ai_suggestion=json.dumps(item),
+                            is_verified=False,
+                        )
+                        session.add(mapping)
+                        queued_items += 1
+                    else:
+                        queued_items += 1
+
+        normalized = apply_verified_mappings(normalized, device_info["vendor"], session)
+        parse_status = "needs_training" if queued_items > 0 else "parsed"
 
         config_file = ConfigFile(
             device_id=device.id,
@@ -193,6 +295,15 @@ async def upload_bulk(
         session.add(config_file)
         session.commit()
         session.refresh(config_file)
+
+        if queued_items > 0:
+            stmt = select(TrainingMapping).where(
+                TrainingMapping.config_id == None,
+                TrainingMapping.vendor == device_info["vendor"],
+            )
+            for mapping in session.exec(stmt):
+                mapping.config_id = config_file.id
+            session.commit()
 
         results.append(UploadResponse(
             message=f"Uploaded {file.filename}: {device_info['vendor']}, {parse_status}",

@@ -1,0 +1,84 @@
+# FortiOS Version: FortiOS 7.2.4
+# Model: FortiGate-60F
+# Serial: FGT60FTK21000001
+# Device Type: Firewall
+
+config system global
+    set hostname "FGT-CORP-EDGE-01"
+    set timezone 04
+    set admin-ssh-v2 enable
+    set admin-telnet disable
+    set admintimeout 15
+    set strong-crypto enable
+    set admin-lockout-threshold 3
+    set admin-lockout-duration 600
+end
+
+config system admin
+    edit "admin"
+        set accprofile "super_admin"
+        set vdom "root"
+        set password-expire enable
+    next
+end
+
+config log syslogd setting
+    set status enable
+    set server "192.168.10.50"
+    set mode udp
+    set port 514
+    set facility local7
+    set format default
+end
+
+config system ntp
+    set ntpsync enable
+    set type custom
+    config ntpserver
+        edit 1
+            set server "192.168.10.100"
+            set authentication enable
+        next
+    end
+end
+
+config system snmp sysinfo
+    set status enable
+    set description "FortiGate Corporate Firewall"
+    set contact-info "security-team@example.com"
+end
+
+config system snmp community
+    edit 1
+        set name "public"
+        set query-v1-status disable
+        set query-v2c-status enable
+    next
+end
+
+config system interface
+    edit "port1"
+        set vdom "root"
+        set ip 192.168.1.1 255.255.255.0
+        set allowaccess ping https ssh
+        set type physical
+        set snmp-index 1
+    next
+    edit "port2"
+        set vdom "root"
+        set ip 10.0.0.1 255.255.255.0
+        set allowaccess ping
+        set type physical
+        set snmp-index 2
+    next
+    edit "port3"
+        set vdom "root"
+        set status down
+        set type physical
+        set snmp-index 3
+    next
+end
+
+config system console
+    set banner "WARNING: Authorized Access Only! Activity is monitored and recorded."
+end

@@ -1,8 +1,8 @@
 """Pydantic schemas for compliance and audit endpoints."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 
 class AuditRequest(BaseModel):
@@ -50,9 +50,16 @@ class AuditReportRead(BaseModel):
     compliance_score: float
     pdf_path: Optional[str] = None
     generated_at: datetime
+    device_hostname: Optional[str] = None
 
     class Config:
         from_attributes = True
+
+    @model_validator(mode='after')
+    def _ensure_utc(self):
+        if self.generated_at and self.generated_at.tzinfo is None:
+            self.generated_at = self.generated_at.replace(tzinfo=timezone.utc)
+        return self
 
 
 class AuditSummary(BaseModel):
@@ -77,6 +84,7 @@ class DashboardStats(BaseModel):
     critical_findings: int
     high_findings: int
     devices_audited: int
+    recent_audits: list[dict] = []
     recent_activity: list[dict] = []
 
 

@@ -591,6 +591,339 @@ NORMALIZERS = {
 }
 
 
+def _parse_mapping_value(key: str, val: Optional[str]):
+    """Convert string mapping value to boolean/int/list/string based on schema context."""
+    if val is None:
+        return None
+    val_str = str(val).strip()
+    val_lower = val_str.lower()
+
+    if val_lower in ("true", "enabled", "enable", "yes"):
+        return True
+    if val_lower in ("false", "disabled", "disable", "no"):
+        return False
+    if val_str.isdigit():
+        return int(val_str)
+
+    # Handle list fields like ntp_servers
+    if "servers" in key or "users" in key:
+        return [s.strip() for s in val_str.split(",") if s.strip()]
+
+    return val_str
+
+
+def apply_verified_mappings(normalized: dict, vendor: str, session, raw_content: Optional[str] = None) -> dict:
+    """Overlay verified TrainingMapping records onto the normalized config dict."""
+    if not session:
+        return normalized
+
+    try:
+        from sqlmodel import select
+        from models.training import TrainingMapping
+
+        stmt = select(TrainingMapping).where(
+            TrainingMapping.is_verified == True,
+        )
+        if vendor and vendor not in ("unknown", "all"):
+            stmt = stmt.where(TrainingMapping.vendor.in_([vendor, "unknown", "all"]))
+
+        mappings = session.exec(stmt).all()
+        for m in mappings:
+            if not m.normalized_key:
+                continue
+
+            # If raw_content is supplied, ensure the command actually appears in the device config
+            if raw_content and m.raw_command:
+                cleaned_cmd = m.raw_command.strip()
+                if cleaned_cmd.lower() not in raw_content.lower():
+                    continue
+
+            parsed_val = _parse_mapping_value(m.normalized_key, m.normalized_value)
+
+            # Support dot notation e.g. "remote_access.ssh_version"
+            parts = m.normalized_key.split(".")
+            if len(parts) == 2:
+                section, field = parts[0], parts[1]
+                if section not in normalized or not isinstance(normalized[section], dict):
+                    normalized[section] = {}
+                normalized[section][field] = parsed_val
+                # Auto-enable parent flags where appropriate
+                if section == "logging" and field == "log_destination" and parsed_val:
+                    normalized["logging"]["logging_enabled"] = True
+            elif len(parts) == 1:
+                field = parts[0]
+                target_sec = m.security_category if m.security_category in normalized else None
+                if target_sec and isinstance(normalized[target_sec], dict):
+                    normalized[target_sec][field] = parsed_val
+                else:
+                    for sec, content in normalized.items():
+                        if isinstance(content, dict) and field in content:
+                            normalized[sec][field] = parsed_val
+                            break
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Error applying verified mappings: {e}")
+
+    return normalized
+
+
+def detect_unrecognized_lines(raw_config: str, vendor: str) -> list[dict]:
+    """Scan raw config for unrecognized security-relevant CLI commands."""
+    uncertain = []
+    lines = raw_config.splitlines()
+
+    if vendor == "quantumguard":
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#"):
+                continue
+
+            start_idx = max(0, i - 2)
+            end_idx = min(len(lines), i + 3)
+            context = "\n".join(lines[start_idx:end_idx])
+
+            if "admin-ssh-protocol" in stripped:
+                val = "2" if "v2" in stripped.lower() or "2" in stripped else "1"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "remote_access.ssh_version",
+                    "best_guess_value": val,
+                    "category": "remote_access",
+                    "confidence": 0.95,
+                })
+            elif "legacy-telnet-service" in stripped or "telnet" in stripped:
+                val = "false" if "disable" in stripped.lower() else "true"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "remote_access.telnet_enabled",
+                    "best_guess_value": val,
+                    "category": "remote_access",
+                    "confidence": 0.95,
+                })
+            elif "auth-max-failed-attempts" in stripped:
+                m = re.search(r"failed-attempts\s+(\d+)", stripped)
+                val = m.group(1) if m else "3"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "authentication.login_attempts_limit",
+                    "best_guess_value": val,
+                    "category": "authentication",
+                    "confidence": 0.95,
+                })
+            elif "password-policy" in stripped:
+                m = re.search(r"min-length\s+(\d+)", stripped)
+                val = m.group(1) if m else "14"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "authentication.password_min_length",
+                    "best_guess_value": val,
+                    "category": "authentication",
+                    "confidence": 0.95,
+                })
+            elif "master-encryption-engine" in stripped or "crypto" in stripped:
+                val = "true" if "enable" in stripped.lower() else "false"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "encryption.password_encryption_service",
+                    "best_guess_value": val,
+                    "category": "encryption",
+                    "confidence": 0.95,
+                })
+            elif "syslog-server" in stripped:
+                m = re.search(r"syslog-server\s+([^\s]+)", stripped)
+                val = m.group(1) if m else "192.168.10.50"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "logging.log_destination",
+                    "best_guess_value": val,
+                    "category": "logging",
+                    "confidence": 0.90,
+                })
+            elif "cdp-broadcast" in stripped:
+                val = "false" if "disable" in stripped.lower() else "true"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "services.cdp_enabled",
+                    "best_guess_value": val,
+                    "category": "services",
+                    "confidence": 0.90,
+                })
+            elif "web-mgmt-http" in stripped:
+                val = "false" if "disable" in stripped.lower() else "true"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "services.http_server_enabled",
+                    "best_guess_value": val,
+                    "category": "services",
+                    "confidence": 0.90,
+                })
+            elif "login-disclaimer" in stripped or "banner" in stripped:
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "banners.login_banner_set",
+                    "best_guess_value": "true",
+                    "category": "banners",
+                    "confidence": 0.95,
+                })
+
+    elif vendor == "fortinet":
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if not stripped or stripped.startswith("#") or stripped.startswith("end") or stripped.startswith("next"):
+                continue
+
+            start_idx = max(0, i - 2)
+            end_idx = min(len(lines), i + 3)
+            context = "\n".join(lines[start_idx:end_idx])
+
+            if "admin-ssh-v2" in stripped:
+                val = "2" if "enable" in stripped.lower() else "1"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "remote_access.ssh_version",
+                    "best_guess_value": val,
+                    "category": "remote_access",
+                    "confidence": 0.95,
+                })
+            elif "admin-telnet" in stripped:
+                val = "false" if "disable" in stripped.lower() else "true"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "remote_access.telnet_enabled",
+                    "best_guess_value": val,
+                    "category": "remote_access",
+                    "confidence": 0.95,
+                })
+            elif "admintimeout" in stripped:
+                m = re.search(r"admintimeout\s+(\d+)", stripped)
+                mins = int(m.group(1)) if m else 15
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "remote_access.ssh_timeout",
+                    "best_guess_value": str(mins * 60),
+                    "category": "remote_access",
+                    "confidence": 0.90,
+                })
+            elif "strong-crypto" in stripped:
+                val = "true" if "enable" in stripped.lower() else "false"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "encryption.password_encryption_service",
+                    "best_guess_value": val,
+                    "category": "encryption",
+                    "confidence": 0.90,
+                })
+            elif "admin-lockout-threshold" in stripped:
+                m = re.search(r"threshold\s+(\d+)", stripped)
+                val = m.group(1) if m else "3"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "authentication.login_attempts_limit",
+                    "best_guess_value": val,
+                    "category": "authentication",
+                    "confidence": 0.85,
+                })
+    else:
+        for i, line in enumerate(lines):
+            stripped = line.strip()
+            if not stripped or stripped.startswith("!") or stripped.startswith("#"):
+                continue
+            lower_line = stripped.lower()
+
+            start_idx = max(0, i - 2)
+            end_idx = min(len(lines), i + 3)
+            context = "\n".join(lines[start_idx:end_idx])
+
+            if "ssh" in lower_line:
+                val = "2" if "2" in lower_line or "enable" in lower_line or "v2" in lower_line else "1"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "remote_access.ssh_version",
+                    "best_guess_value": val,
+                    "category": "remote_access",
+                    "confidence": 0.85,
+                })
+            elif "telnet" in lower_line:
+                val = "false" if "disable" in lower_line or "no" in lower_line else "true"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "remote_access.telnet_enabled",
+                    "best_guess_value": val,
+                    "category": "remote_access",
+                    "confidence": 0.85,
+                })
+            elif "crypto" in lower_line or "password-enc" in lower_line:
+                val = "true" if "enable" in lower_line or "yes" in lower_line else "false"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "encryption.password_encryption_service",
+                    "best_guess_value": val,
+                    "category": "encryption",
+                    "confidence": 0.85,
+                })
+            elif "attempt" in lower_line or "lockout" in lower_line or "tries" in lower_line:
+                m = re.search(r"(\d+)", stripped)
+                val = m.group(1) if m else "3"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "authentication.login_attempts_limit",
+                    "best_guess_value": val,
+                    "category": "authentication",
+                    "confidence": 0.85,
+                })
+            elif "min-length" in lower_line or "password-len" in lower_line:
+                m = re.search(r"(\d+)", stripped)
+                val = m.group(1) if m else "12"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "authentication.password_min_length",
+                    "best_guess_value": val,
+                    "category": "authentication",
+                    "confidence": 0.85,
+                })
+            elif "syslog" in lower_line or "logging" in lower_line:
+                m = re.search(r"(\d+\.\d+\.\d+\.\d+)", stripped)
+                val = m.group(1) if m else "192.168.10.50"
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "logging.log_destination",
+                    "best_guess_value": val,
+                    "category": "logging",
+                    "confidence": 0.80,
+                })
+            elif "banner" in lower_line or "disclaimer" in lower_line:
+                uncertain.append({
+                    "raw_line": stripped,
+                    "context": context,
+                    "best_guess_key": "banners.login_banner_set",
+                    "best_guess_value": "true",
+                    "category": "banners",
+                    "confidence": 0.85,
+                })
+
+    return uncertain
+
+
 def normalize_config(raw_config: str, vendor: str, device_info: dict) -> tuple[dict, str]:
     """Normalize a raw config file to the vendor-neutral JSON schema.
 
@@ -601,4 +934,12 @@ def normalize_config(raw_config: str, vendor: str, device_info: dict) -> tuple[d
     normalizer = NORMALIZERS.get(vendor)
     if normalizer:
         return normalizer(raw_config, device_info), "parsed"
-    return _empty_schema(), "needs_ai"
+    
+    schema = _empty_schema()
+    schema["device"] = {
+        "hostname": device_info.get("hostname", "unknown"),
+        "vendor": vendor,
+        "model": device_info.get("model", "unknown"),
+        "os": device_info.get("os_version", "unknown"),
+    }
+    return schema, "needs_ai"

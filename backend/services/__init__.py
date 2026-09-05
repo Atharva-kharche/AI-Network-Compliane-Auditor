@@ -7,6 +7,29 @@ from typing import Tuple
 # Vendor detection patterns — order matters, first match wins
 VENDOR_SIGNATURES = [
     {
+        "vendor": "quantumguard",
+        "patterns": [
+            r"quantum-system",
+            r"quantum-sec",
+            r"quantum-crypto",
+            r"quantum-logging",
+            r"#\s*QuantumGuard",
+        ],
+        "min_matches": 2,
+    },
+    {
+        "vendor": "fortinet",
+        "patterns": [
+            r"^config\s+system",
+            r"^set\s+admin-ssh",
+            r"^set\s+admintimeout",
+            r"^set\s+strong-crypto",
+            r"config\s+log\s+syslogd",
+            r"#\s*FortiOS",
+        ],
+        "min_matches": 2,
+    },
+    {
         "vendor": "arista",
         "patterns": [
             r"^!\s*Arista",
@@ -157,19 +180,53 @@ def extract_sonic_metadata(raw_config: str) -> dict:
     return meta
 
 
+def extract_fortinet_metadata(raw_config: str) -> dict:
+    """Extract metadata from Fortinet FortiOS config."""
+    meta = {"hostname": "unknown", "os_version": "FortiOS 7.2", "model": "FortiGate-60F"}
+    for line in raw_config.splitlines():
+        line = line.strip()
+        if m := re.match(r'^(?:set\s+hostname|hostname)\s+["\']?([^"\']+)["\']?', line, re.IGNORECASE):
+            meta["hostname"] = m.group(1).strip()
+        elif m := re.match(r"^#\s*FortiOS\s*Version:\s*(.+)", line, re.IGNORECASE):
+            meta["os_version"] = m.group(1).strip()
+        elif m := re.match(r"^#\s*Model:\s*(.+)", line, re.IGNORECASE):
+            meta["model"] = m.group(1).strip()
+        elif m := re.match(r"^#\s*Serial:\s*(.+)", line, re.IGNORECASE):
+            meta["serial_number"] = m.group(1).strip()
+    return meta
+
+
+def extract_quantumguard_metadata(raw_config: str) -> dict:
+    """Extract metadata from QuantumGuard / Unknown OS config."""
+    meta = {"hostname": "QG-SEC-CORE-01", "os_version": "QuantumGuard OS 4.1", "model": "QG-NextGen-9000", "serial_number": "QG9K-CORP-98821"}
+    for line in raw_config.splitlines():
+        line = line.strip()
+        if m := re.match(r'^(?:quantum-system\s+hostname|hostname)\s+["\']?([^"\']+)["\']?', line, re.IGNORECASE):
+            meta["hostname"] = m.group(1).strip()
+        elif m := re.match(r"^#\s*QuantumGuard\s*OS\s*Version\s*(.+)", line, re.IGNORECASE):
+            meta["os_version"] = f"QuantumGuard OS {m.group(1).strip()}"
+        elif m := re.match(r"^#\s*Model:\s*(.+)", line, re.IGNORECASE):
+            meta["model"] = m.group(1).strip()
+        elif m := re.match(r"^#\s*Serial:\s*(.+)", line, re.IGNORECASE):
+            meta["serial_number"] = m.group(1).strip()
+    return meta
+
+
 METADATA_EXTRACTORS = {
     "cisco": extract_cisco_metadata,
     "paloalto": extract_paloalto_metadata,
     "juniper": extract_juniper_metadata,
     "arista": extract_arista_metadata,
     "sonic": extract_sonic_metadata,
+    "fortinet": extract_fortinet_metadata,
+    "quantumguard": extract_quantumguard_metadata,
 }
 
 
 def detect_device_type(vendor: str, raw_config: str) -> str:
     """Infer whether the device is a router, switch, or firewall."""
     config_lower = raw_config.lower()
-    if vendor == "paloalto":
+    if vendor in ("paloalto", "fortinet"):
         return "firewall"
     if vendor == "juniper" and "security" in config_lower:
         return "firewall"

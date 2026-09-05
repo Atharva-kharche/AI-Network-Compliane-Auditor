@@ -138,6 +138,8 @@ body::before {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  min-width: 0;
+  overflow-x: hidden;
 }
 
 .app-content {
@@ -145,6 +147,9 @@ body::before {
   padding: 28px 32px;
   margin-top: var(--navbar-height);
   animation: fadeIn 0.4s ease;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 @keyframes fadeIn {
@@ -505,6 +510,9 @@ body::before {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .badge-pass { background: var(--color-success-bg); color: var(--color-success); }
@@ -523,7 +531,9 @@ body::before {
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
 }
 
 .data-table {
@@ -681,11 +691,13 @@ body::before {
 /* --------------- Tabs --------------- */
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   background: var(--bg-tertiary);
   padding: 4px;
   border-radius: var(--radius-md);
   margin-bottom: 24px;
+  min-width: 0;
 }
 
 .tab {
@@ -958,6 +970,12 @@ body::before {
 .mb-24 { margin-bottom: 24px; }
 .w-full { width: 100%; }
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flex-wrap { flex-wrap: wrap; }
+.badge-neutral { background: var(--bg-tertiary); color: var(--text-secondary); }
+.min-w-0 { min-width: 0; }
+.mb-20 { margin-bottom: 20px; }
+.mt-2 { margin-top: 2px; }
+.mt-12 { margin-top: 12px; }
 
 /* --------------- Pulse animation --------------- */
 @keyframes pulse {

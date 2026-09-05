@@ -17,6 +17,7 @@ from schemas.compliance import (
     AuditSummary,
 )
 from services.compliance_engine import run_audit, calculate_score
+from services.pdf_generator import generate_pdf_report
 
 router = APIRouter(prefix="/api/v1", tags=["Compliance Audit"])
 
@@ -45,6 +46,13 @@ def _run_device_audit(device_id: int, framework: str, session: Session) -> Audit
 
     # Parse normalized config
     normalized = json.loads(config.normalized_config)
+
+    # Apply verified training mappings
+    from services.normalizer import apply_verified_mappings
+    normalized = apply_verified_mappings(normalized, device.vendor, session)
+    config.normalized_config = json.dumps(normalized)
+    session.add(config)
+    session.commit()
 
     # Run the compliance engine
     results = run_audit(normalized, framework, device.vendor)
@@ -96,6 +104,45 @@ def _run_device_audit(device_id: int, framework: str, session: Session) -> Audit
     session.add(report)
     session.commit()
     session.refresh(report)
+
+    # Auto-generate PDF report so every audit has a downloadable PDF
+    try:
+        device_dict = {
+            "hostname": device.hostname,
+            "vendor": device.vendor,
+            "model": device.model,
+            "os_version": device.os_version,
+            "serial_number": device.serial_number,
+            "device_type": device.device_type,
+        }
+        result_dicts = [
+            {
+                "rule_id": r["rule_id"],
+                "rule_name": r["rule_name"],
+                "category": r["category"],
+                "status": r["status"],
+                "severity": r["severity"],
+                "actual_value": r.get("actual_value"),
+                "expected_value": r.get("expected_value"),
+                "remediation": r.get("remediation"),
+            }
+            for r in results
+        ]
+        pdf_path = generate_pdf_report(
+            device_info=device_dict,
+            audit_results=result_dicts,
+            score_summary=score,
+            framework=framework,
+            report_id=report.id,
+            audit_timestamp=report.generated_at,
+        )
+        report.pdf_path = pdf_path
+        session.add(report)
+        session.commit()
+        session.refresh(report)
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Auto PDF generation failed for report {report.id}: {e}")
 
     return report
 

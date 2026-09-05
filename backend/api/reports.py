@@ -1,6 +1,7 @@
 """Reports API — PDF generation and download endpoints."""
 
 import json
+from datetime import timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -15,6 +16,28 @@ from services.compliance_engine import run_audit, calculate_score
 from services.pdf_generator import generate_pdf_report
 
 router = APIRouter(prefix="/api/v1", tags=["Reports"])
+
+
+def _report_to_read(report: AuditReport, session: Session) -> dict:
+    """Convert an AuditReport ORM instance to an AuditReportRead-compatible dict,
+    including the device hostname looked up from the Device table."""
+    device = session.get(Device, report.device_id)
+    data = {
+        "id": report.id,
+        "device_id": report.device_id,
+        "config_id": report.config_id,
+        "framework": report.framework,
+        "total_rules": report.total_rules,
+        "passed": report.passed,
+        "failed": report.failed,
+        "warnings": report.warnings,
+        "not_applicable": report.not_applicable,
+        "compliance_score": report.compliance_score,
+        "pdf_path": report.pdf_path,
+        "generated_at": report.generated_at.replace(tzinfo=timezone.utc) if report.generated_at.tzinfo is None else report.generated_at,
+        "device_hostname": device.hostname if device else None,
+    }
+    return data
 
 
 @router.post("/reports/generate/{device_id}", response_model=AuditReportRead)
@@ -89,6 +112,7 @@ def generate_report(
         score_summary=score_summary,
         framework=framework,
         report_id=report.id,
+        audit_timestamp=report.generated_at,
     )
 
     # Update report with PDF path
@@ -97,7 +121,7 @@ def generate_report(
     session.commit()
     session.refresh(report)
 
-    return report
+    return _report_to_read(report, session)
 
 
 @router.get("/reports/download/{report_id}")
@@ -126,4 +150,4 @@ def list_reports(session: Session = Depends(get_session)):
     reports = session.exec(
         select(AuditReport).order_by(AuditReport.generated_at.desc())
     ).all()
-    return reports
+    return [_report_to_read(r, session) for r in reports]

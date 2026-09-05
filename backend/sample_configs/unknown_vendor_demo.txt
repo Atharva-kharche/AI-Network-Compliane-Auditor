@@ -1,0 +1,17 @@
+# QuantumGuard OS Version 4.1
+# Model: QG-NextGen-9000
+# Serial: QG9K-CORP-98821
+# Device Type: Firewall
+
+quantum-system hostname "QG-SEC-CORE-01"
+quantum-system domain "corp.internal"
+quantum-sec admin-ssh-protocol v2
+quantum-sec legacy-telnet-service disabled
+quantum-sec auth-max-failed-attempts 3
+quantum-sec password-policy min-length 14
+quantum-crypto master-encryption-engine enabled
+quantum-logging syslog-server 192.168.10.50
+quantum-logging syslog-severity informational
+quantum-services cdp-broadcast disabled
+quantum-services web-mgmt-http disabled
+quantum-banner login-disclaimer "UNAUTHORIZED ACCESS PROHIBITED. ALL SESSIONS MONITORED."

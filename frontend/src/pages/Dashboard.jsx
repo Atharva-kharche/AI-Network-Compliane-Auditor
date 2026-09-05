@@ -6,7 +6,7 @@ import {
 } from 'recharts'
 import {
   Server, ShieldCheck, ShieldAlert, AlertTriangle,
-  Upload, Play, FileText, TrendingUp,
+  Upload, Play, FileText, TrendingUp, CheckCircle2,
 } from 'lucide-react'
 import { getDashboardStats, getRiskDistribution } from '../services/api'
 
@@ -26,7 +26,7 @@ const CustomTooltip = ({ active, payload, label }) => {
       <div style={{ color: '#f1f5f9', fontWeight: 600, marginBottom: 4 }}>{label}</div>
       {payload.map((p, i) => (
         <div key={i} style={{ color: p.color, fontSize: 11 }}>
-          {p.name}: {p.value}
+          {p.name}: {p.value}%
         </div>
       ))}
     </div>
@@ -55,16 +55,17 @@ export default function Dashboard() {
     return <div className="loading-overlay"><div className="spinner" /> Loading dashboard…</div>
   }
 
+  // Risk distribution data calculated from actual non-compliant findings
   const riskData = risk ? [
-    { name: 'Critical', value: risk.critical },
-    { name: 'High', value: risk.high },
-    { name: 'Medium', value: risk.medium },
-    { name: 'Low', value: risk.low },
-    { name: 'Info', value: risk.info },
+    { name: 'Critical', value: risk.critical || 0 },
+    { name: 'High', value: risk.high || 0 },
+    { name: 'Medium', value: risk.medium || 0 },
+    { name: 'Low', value: risk.low || 0 },
+    { name: 'Info', value: risk.info || 0 },
   ].filter(d => d.value > 0) : []
 
-  // Build bar chart data from recent activity
-  const recentAudits = stats?.recent_activity?.filter(a => a.type === 'audit') || []
+  // Recent audit records directly from database
+  const recentAudits = stats?.recent_audits || []
 
   return (
     <div>
@@ -72,7 +73,7 @@ export default function Dashboard() {
         <div className="page-header-row">
           <div>
             <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">Network security compliance overview</p>
+            <p className="page-subtitle">Network security compliance overview (Live Database Analytics)</p>
           </div>
           <div className="flex gap-12">
             <button className="btn btn-secondary" onClick={() => navigate('/upload')}>
@@ -82,13 +83,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards — All values dynamically computed from DB */}
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-card-icon accent">
             <Server size={22} />
           </div>
-          <div className="stat-card-value">{stats?.total_devices || 0}</div>
+          <div className="stat-card-value">{stats?.total_devices ?? 0}</div>
           <div className="stat-card-label">Total Devices</div>
         </div>
 
@@ -96,7 +97,9 @@ export default function Dashboard() {
           <div className="stat-card-icon success">
             <TrendingUp size={22} />
           </div>
-          <div className="stat-card-value">{stats?.average_compliance_score || 0}%</div>
+          <div className="stat-card-value">
+            {stats?.average_compliance_score !== undefined ? `${stats.average_compliance_score}%` : '0%'}
+          </div>
           <div className="stat-card-label">Avg Compliance</div>
         </div>
 
@@ -104,7 +107,7 @@ export default function Dashboard() {
           <div className="stat-card-icon danger">
             <ShieldAlert size={22} />
           </div>
-          <div className="stat-card-value">{stats?.critical_findings || 0}</div>
+          <div className="stat-card-value">{stats?.critical_findings ?? 0}</div>
           <div className="stat-card-label">Critical Findings</div>
         </div>
 
@@ -112,75 +115,82 @@ export default function Dashboard() {
           <div className="stat-card-icon warning">
             <AlertTriangle size={22} />
           </div>
-          <div className="stat-card-value">{stats?.high_findings || 0}</div>
+          <div className="stat-card-value">{stats?.high_findings ?? 0}</div>
           <div className="stat-card-label">High Findings</div>
         </div>
       </div>
 
       {/* Charts Row */}
-      {(recentAudits.length > 0 || riskData.length > 0) && (
-        <div className="charts-grid">
-          {/* Recent Audit Scores */}
-          <div className="chart-card">
-            <div className="chart-card-title">Recent Audit Scores</div>
-            {recentAudits.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <BarChart data={recentAudits.map(a => {
-                  const match = a.description?.match(/Audited (.+?) — (\w+) \(([\d.]+)%\)/)
-                  return {
-                    name: match?.[1] || 'Device',
-                    score: parseFloat(match?.[3] || 0),
-                    framework: match?.[2] || 'CIS',
-                  }
-                })}>
-                  <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Bar dataKey="score" name="Score" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={50} />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="empty-state" style={{ padding: 40 }}>
-                <div className="empty-state-text">Run audits to see scores here</div>
-              </div>
+      <div className="charts-grid mb-24">
+        {/* Recent Audit Scores */}
+        <div className="chart-card">
+          <div className="flex items-center justify-between mb-16">
+            <div className="chart-card-title" style={{ margin: 0 }}>Recent Audit Scores</div>
+            {recentAudits.length > 0 && (
+              <span className="badge badge-neutral" style={{ fontSize: 11 }}>
+                {recentAudits.length} Real Audit{recentAudits.length > 1 ? 's' : ''}
+              </span>
             )}
           </div>
-
-          {/* Risk Distribution */}
-          <div className="chart-card">
-            <div className="chart-card-title">Risk Distribution</div>
-            {riskData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={260}>
-                <PieChart>
-                  <Pie
-                    data={riskData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={55}
-                    outerRadius={90}
-                    dataKey="value"
-                    paddingAngle={3}
-                    stroke="none"
-                  >
-                    {riskData.map((entry, idx) => {
-                      const colorIdx = RISK_LABELS.indexOf(entry.name)
-                      return <Cell key={idx} fill={RISK_COLORS[colorIdx >= 0 ? colorIdx : 4]} />
-                    })}
-                  </Pie>
-                  <Tooltip content={<CustomTooltip />} />
-                  <Legend
-                    formatter={(val) => <span style={{ color: '#94a3b8', fontSize: 11 }}>{val}</span>}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="empty-state" style={{ padding: 40 }}>
-                <div className="empty-state-text">No risk data yet</div>
-              </div>
-            )}
-          </div>
+          {recentAudits.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <BarChart data={recentAudits.slice(0, 8)}>
+                <XAxis dataKey="name" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 100]} tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Bar dataKey="score" name="Compliance Score" fill="#6366f1" radius={[6, 6, 0, 0]} maxBarSize={48} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="empty-state" style={{ padding: 40 }}>
+              <div className="empty-state-text">No audits conducted yet. Upload configs and run audits to see real-time scores.</div>
+            </div>
+          )}
         </div>
-      )}
+
+        {/* Risk Distribution */}
+        <div className="chart-card">
+          <div className="flex items-center justify-between mb-16">
+            <div className="chart-card-title" style={{ margin: 0 }}>Risk Distribution</div>
+            {riskData.length > 0 && (
+              <span className="badge badge-warning" style={{ fontSize: 11 }}>
+                {riskData.reduce((acc, d) => acc + d.value, 0)} Total Findings
+              </span>
+            )}
+          </div>
+          {riskData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={260}>
+              <PieChart>
+                <Pie
+                  data={riskData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={90}
+                  dataKey="value"
+                  paddingAngle={3}
+                  stroke="none"
+                >
+                  {riskData.map((entry, idx) => {
+                    const colorIdx = RISK_LABELS.indexOf(entry.name)
+                    return <Cell key={idx} fill={RISK_COLORS[colorIdx >= 0 ? colorIdx : 4]} />
+                  })}
+                </Pie>
+                <Tooltip content={<CustomTooltip />} />
+                <Legend
+                  formatter={(val) => <span style={{ color: '#94a3b8', fontSize: 11 }}>{val}</span>}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="empty-state" style={{ padding: 40 }}>
+              <div className="empty-state-icon"><CheckCircle2 size={32} color="var(--color-pass)" /></div>
+              <div className="empty-state-title" style={{ fontSize: 14 }}>Zero Failed Findings</div>
+              <div className="empty-state-text">All audited configurations pass compliance rules or no findings recorded.</div>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Recent Activity */}
       <div className="card">
@@ -209,7 +219,7 @@ export default function Dashboard() {
                     </td>
                     <td>{a.description}</td>
                     <td style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
-                      {new Date(a.timestamp).toLocaleString()}
+                      {new Date(a.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
                     </td>
                     <td>
                       <button

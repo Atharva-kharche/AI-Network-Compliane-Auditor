@@ -106,7 +106,7 @@ export default function UploadConfig() {
                     <td style={{ textTransform: 'capitalize' }}>{d.device_type}</td>
                     <td style={{ fontSize: 12, fontFamily: 'var(--font-mono)' }}>{d.os_version}</td>
                     <td style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                      {new Date(d.uploaded_at).toLocaleString()}
+                      {new Date(d.uploaded_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
                     </td>
                     <td>
                       <div className="flex gap-8">

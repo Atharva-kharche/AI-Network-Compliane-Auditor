@@ -149,7 +149,7 @@ export default function AuditResults() {
 
       {/* Score + Results */}
       {summary ? (
-        <div style={{ display: 'grid', gridTemplateColumns: '200px 1fr', gap: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 200px) minmax(0, 1fr)', gap: 24 }}>
           <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <ScoreGauge score={summary.compliance_score} size={150} label={`${framework} Score`} />
             <div style={{ marginTop: 16, textAlign: 'center' }}>
