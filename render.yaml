@@ -10,6 +10,6 @@ services:
       - key: PYTHON_VERSION
         value: 3.12.8
       - key: FRONTEND_URL
-        value: "" # Update this after Vercel deployment
+        value: "https://frontend-liard-omega-93.vercel.app"
       - key: GEMINI_API_KEY
         sync: false # User must set this manually in Render dashboard
