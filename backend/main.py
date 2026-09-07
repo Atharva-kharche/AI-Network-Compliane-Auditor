@@ -32,6 +32,13 @@ async def lifespan(app: FastAPI):
     init_db()
     settings.ensure_dirs()
     logger.info("Database initialized, directories ensured")
+
+    from sqlmodel import Session
+    from database import engine
+    from seed import seed_demo_data
+    with Session(engine) as session:
+        seed_demo_data(session)
+
     yield
     logger.info("Shutting down")
 
@@ -79,6 +86,7 @@ app.include_router(dashboard_router)
 
 
 @app.get("/", tags=["Health"])
+@app.get("/health", tags=["Health"])
 def health_check():
     """Root health check endpoint."""
     return {

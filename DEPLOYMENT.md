@@ -30,6 +30,14 @@ This document outlines the final production deployment architecture for the NetA
 - **CORS Configured**: Yes, Vercel frontend is securely connected to the Render backend.
 - **Gemini Configuration**: Key is kept safely in the Render backend environments. Frontend does not expose the key.
 
+## Render Backend Deployment
+
+> [!WARNING]
+> **Ephemeral Storage Limitation**: The application is configured to use SQLite for the database. On Render's Free tier, the filesystem is ephemeral. This means that every time the service spins down (after 15 minutes of inactivity) or restarts, the database is completely wiped and reset to an empty state. 
+> To mitigate this for demonstrations, a safe seed script automatically populates demo data (devices, configs, and audit reports) when the application restarts with an empty database. For persistent production use, you must upgrade to a paid Render plan with a persistent disk, or migrate to a managed PostgreSQL database.
+
+The FastAPI backend is configured for easy deployment on [Render](https://render.com/).
+
 ## Testing Performed
 - **Python Runtime Fix**: Enforced Python 3.12 using `.python-version` and environment variables.
 - **Dependency Clean**: Verified `requirements.txt` to contain strictly used dependencies compatible with Python 3.12.
