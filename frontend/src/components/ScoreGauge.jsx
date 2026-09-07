@@ -1,86 +1,39 @@
 /**
- * ScoreGauge — circular SVG gauge for compliance score visualization.
+ * ScoreGauge — clean numeric score with meter bar.
+ * No gradient ring — uses large number + horizontal posture meter.
  */
-export default function ScoreGauge({ score = 0, size = 160, strokeWidth = 10, label = 'Compliance Score' }) {
-  const radius = (size - strokeWidth) / 2
-  const circumference = 2 * Math.PI * radius
-  const offset = circumference - (score / 100) * circumference
-
-  // Color based on score
+export default function ScoreGauge({ score = 0, size = 160, label = 'Compliance Score' }) {
   const color =
-    score >= 80 ? '#10b981' :
-    score >= 50 ? '#f59e0b' :
-    '#ef4444'
+    score >= 80 ? 'var(--color-pass)' :
+    score >= 50 ? 'var(--color-warning)' :
+    'var(--color-fail)'
 
-  const glowColor =
-    score >= 80 ? 'rgba(16, 185, 129, 0.3)' :
-    score >= 50 ? 'rgba(245, 158, 11, 0.3)' :
-    'rgba(239, 68, 68, 0.3)'
+  const statusLabel =
+    score >= 80 ? 'Compliant' :
+    score >= 50 ? 'Needs Attention' :
+    'Critical'
 
   return (
-    <div className="score-gauge">
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        <defs>
-          <filter id="glow">
-            <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-            <feMerge>
-              <feMergeNode in="coloredBlur" />
-              <feMergeNode in="SourceGraphic" />
-            </feMerge>
-          </filter>
-        </defs>
-        {/* Background ring */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke="rgba(148, 163, 184, 0.1)"
-          strokeWidth={strokeWidth}
+    <div className="score-display">
+      <div
+        className="score-number"
+        style={{ color, fontSize: size * 0.32 }}
+      >
+        {Math.round(score)}
+        <span style={{ fontSize: size * 0.14, fontWeight: 600, opacity: 0.7 }}>%</span>
+      </div>
+      <div className="score-label" style={{ color }}>
+        {statusLabel}
+      </div>
+      <div className="score-meter" style={{ maxWidth: size * 0.9 }}>
+        <div
+          className="score-meter-fill"
+          style={{ width: `${score}%`, background: color }}
         />
-        {/* Score ring */}
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          fill="none"
-          stroke={color}
-          strokeWidth={strokeWidth}
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          transform={`rotate(-90 ${size / 2} ${size / 2})`}
-          style={{
-            transition: 'stroke-dashoffset 1s ease-in-out, stroke 0.5s ease',
-            filter: 'url(#glow)',
-          }}
-        />
-        {/* Score text */}
-        <text
-          x={size / 2}
-          y={size / 2 - 8}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fill={color}
-          fontSize={size * 0.22}
-          fontWeight="800"
-          fontFamily="Inter, system-ui, sans-serif"
-        >
-          {Math.round(score)}%
-        </text>
-        <text
-          x={size / 2}
-          y={size / 2 + 18}
-          textAnchor="middle"
-          dominantBaseline="central"
-          fill="#64748b"
-          fontSize={10}
-          fontWeight="500"
-          fontFamily="Inter, system-ui, sans-serif"
-        >
-          {label}
-        </text>
-      </svg>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 6 }}>
+        {label}
+      </div>
     </div>
   )
 }

@@ -19,8 +19,8 @@ export function StatusBadge({ status }) {
   const cfg = statusConfig[status] || statusConfig.not_applicable
   const { label, class: cls, Icon } = cfg
   return (
-    <span className={`badge ${cls}`}>
-      <Icon size={12} />
+    <span className={`badge ${cls}`} role="status">
+      <Icon size={11} />
       {label}
     </span>
   )

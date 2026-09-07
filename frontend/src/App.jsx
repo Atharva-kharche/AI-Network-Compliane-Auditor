@@ -1,5 +1,5 @@
 import { Routes, Route, useLocation } from 'react-router-dom'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Sidebar from './components/Sidebar'
 import Dashboard from './pages/Dashboard'
 import UploadConfig from './pages/UploadConfig'
@@ -9,21 +9,29 @@ import ReportViewer from './pages/ReportViewer'
 import DeviceDetails from './pages/DeviceDetails'
 import DeviceList from './pages/DeviceList'
 import { getPendingTraining } from './services/api'
+import api from './services/api'
 
 const PAGE_TITLES = {
   '/': 'Dashboard',
-  '/upload': 'Upload Configuration',
+  '/upload': 'Import Configuration',
   '/training': 'AI Training',
-  '/reports': 'Reports',
-  '/devices': 'All Devices',
+  '/reports': 'Audit Reports',
+  '/devices': 'Device Inventory',
 }
 
-function Navbar({ title }) {
+function TopBar({ title, apiStatus }) {
   return (
-    <header className="navbar">
-      <span className="navbar-title">{title}</span>
-      <div className="navbar-actions">
-        <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+    <header className="topbar" role="banner">
+      <span className="topbar-title">{title}</span>
+      <div className="topbar-right">
+        <div className="topbar-status">
+          <span
+            className={`topbar-status-dot${apiStatus !== 'online' ? ' offline' : ''}`}
+            aria-hidden="true"
+          />
+          <span>{apiStatus === 'online' ? 'Engine Online' : apiStatus === 'connecting' ? 'Connecting…' : 'Engine Offline'}</span>
+        </div>
+        <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
           v1.0.0
         </span>
       </div>
@@ -34,11 +42,24 @@ function Navbar({ title }) {
 export default function App() {
   const location = useLocation()
   const [pendingCount, setPendingCount] = useState(0)
+  const [apiStatus, setApiStatus] = useState('connecting')
 
-  // Get the current page title
   let pageTitle = PAGE_TITLES[location.pathname] || ''
   if (location.pathname.startsWith('/audit/')) pageTitle = 'Audit Results'
   if (location.pathname.startsWith('/devices/') && location.pathname !== '/devices') pageTitle = 'Device Details'
+
+  const checkApiHealth = useCallback(async () => {
+    try {
+      await api.get('/health')
+      setApiStatus('online')
+    } catch {
+      setApiStatus('offline')
+    }
+  }, [])
+
+  useEffect(() => {
+    checkApiHealth()
+  }, [checkApiHealth])
 
   // Load pending training count for sidebar badge
   useEffect(() => {
@@ -46,16 +67,20 @@ export default function App() {
       try {
         const pending = await getPendingTraining()
         setPendingCount(pending.length)
-      } catch { /* empty */ }
+        // If we got here, API is reachable
+        setApiStatus('online')
+      } catch {
+        /* Keep current status */
+      }
     }
     loadPending()
-  }, [location.pathname]) // Re-check when navigating
+  }, [location.pathname])
 
   return (
     <div className="app-layout">
-      <Sidebar pendingCount={pendingCount} />
+      <Sidebar pendingCount={pendingCount} apiStatus={apiStatus} />
       <div className="app-main">
-        <Navbar title={pageTitle} />
+        <TopBar title={pageTitle} apiStatus={apiStatus} />
         <main className="app-content">
           <Routes>
             <Route path="/" element={<Dashboard />} />

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import {
-  Brain, Check, X, ChevronRight, Sparkles, Trash2, RefreshCw, ShieldCheck, ArrowRight, Zap, CheckCircle2, Play, Info, AlertTriangle
+  Brain, Check, X, ChevronRight, Trash2, RefreshCw,
+  ShieldCheck, ArrowRight, Zap, CheckCircle2, Play
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
@@ -91,7 +92,7 @@ export default function TrainingInterface() {
     setDemoLoading(true)
     try {
       const res = await loadDemoUnknownConfig()
-      toast.success(res.message || 'Demo unknown configuration loaded successfully!')
+      toast.success(res.message || 'Demo unknown configuration loaded')
       await loadData()
       setTab('pending')
     } catch (err) {
@@ -147,7 +148,7 @@ export default function TrainingInterface() {
     }
     try {
       await submitMapping(mappingId, formData.category, formData.key, formData.value)
-      toast.success('Mapping learned and saved as Verified!')
+      toast.success('Mapping learned and saved')
       setEditingId(null)
       setFormData({ category: '', key: '', value: '' })
       await loadData()
@@ -170,7 +171,7 @@ export default function TrainingInterface() {
     setReAuditing(prev => ({ ...prev, [device.id]: true }))
     try {
       const res = await reAuditDevice(device.id, 'CIS')
-      toast.success(res.message || 'Device re-audited successfully!')
+      toast.success(res.message || 'Device re-audited successfully')
       setAuditResultNotification({
         hostname: device.hostname,
         vendor: device.vendor,
@@ -193,7 +194,12 @@ export default function TrainingInterface() {
   }
 
   if (loading) {
-    return <div className="loading-overlay"><div className="spinner" /> Loading training data…</div>
+    return (
+      <div className="loading-overlay">
+        <div className="spinner" />
+        <span>Loading intelligence data…</span>
+      </div>
+    )
   }
 
   const verifiedMappings = mappings.filter(m => m.is_verified)
@@ -204,19 +210,19 @@ export default function TrainingInterface() {
       <div className="page-header">
         <div className="page-header-row">
           <div>
-            <h1 className="page-title">AI Training & Knowledge Base</h1>
+            <h1 className="page-title">AI Training Interface</h1>
             <p className="page-subtitle">
-              Teach the AI engine new vendor CLI commands through human-in-the-loop verification
+              Map unrecognized vendor CLI commands to normalized security controls
             </p>
           </div>
           <div className="flex gap-12 items-center">
             {pending.length > 0 ? (
-              <span className="badge badge-warning flex items-center gap-6" style={{ padding: '6px 12px', fontSize: 13 }}>
-                <Brain size={15} /> {pending.length} Unrecognized Commands
+              <span className="badge badge-warning" style={{ padding: '4px 10px' }}>
+                {pending.length} Pending Commands
               </span>
             ) : (
-              <span className="badge badge-pass flex items-center gap-6" style={{ padding: '6px 12px', fontSize: 13 }}>
-                <CheckCircle2 size={15} /> All Commands Normalized
+              <span className="badge badge-pass" style={{ padding: '4px 10px' }}>
+                All Commands Mapped
               </span>
             )}
           </div>
@@ -224,120 +230,91 @@ export default function TrainingInterface() {
       </div>
 
       {/* Interactive Workflow Explainer & Demo Trigger */}
-      <div className="card mb-20" style={{
-        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.08), rgba(168, 85, 247, 0.08))',
-        borderColor: 'rgba(99, 102, 241, 0.25)',
-      }}>
+      <div className="panel mb-24" style={{ borderLeft: '3px solid var(--accent)' }}>
         <div className="flex items-center justify-between flex-wrap gap-16">
           <div>
             <div className="flex items-center gap-8 mb-6">
-              <span className="badge badge-accent" style={{ fontSize: 12, padding: '3px 8px' }}>
-                <Zap size={13} style={{ display: 'inline', marginRight: 4 }} />
-                End-to-End Workflow Demo
+              <span className="badge badge-neutral" style={{ fontSize: 10 }}>
+                Workflow Test
               </span>
-              <strong style={{ fontSize: 15, color: 'var(--text-primary)' }}>
-                Human-in-the-Loop AI Training
+              <strong style={{ fontSize: 13, color: 'var(--text-primary)' }}>
+                Unknown Command Resolution
               </strong>
             </div>
-            <div style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 750 }}>
-              Unknown Vendor/Command ➔ AI detects unknown syntax ➔ Queues in Training Queue ➔ Admin maps command ➔ System remembers verified mapping ➔ Re-audit recognizes command.
+            <div style={{ fontSize: 12, color: 'var(--text-tertiary)', maxWidth: 750 }}>
+              The AI engine automatically detects unknown vendor syntax during parsing. Use this queue to manually map unrecognized commands to standard schemas, teaching the engine for future audits.
             </div>
           </div>
           <button
-            className="btn btn-primary flex items-center gap-8"
+            className="btn btn-secondary flex items-center gap-6"
             disabled={demoLoading}
             onClick={handleLoadDemoConfig}
           >
-            {demoLoading ? <RefreshCw size={15} className="spinner" /> : <Play size={15} />}
-            <span>Load Demo Unknown Config (QuantumGuard OS)</span>
+            {demoLoading ? <div className="spinner" /> : <Play size={12} />}
+            Load Synthetic Unknown Config
           </button>
         </div>
       </div>
 
-      {/* Re-audit Result Banner & Before/After Comparison */}
+      {/* Re-audit Result Banner */}
       {auditResultNotification && (
-        <div className="card mb-20" style={{
-          background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.12), rgba(59, 130, 246, 0.12))',
-          borderColor: 'rgba(16, 185, 129, 0.4)',
-        }}>
+        <div className="panel mb-24" style={{ borderColor: 'var(--color-pass-border)' }}>
           <div className="flex items-start justify-between" style={{ flexWrap: 'wrap', gap: 16 }}>
-            <div className="flex items-start gap-16">
-              <div style={{
-                width: 46,
-                height: 46,
-                borderRadius: '50%',
-                background: 'rgba(16, 185, 129, 0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'var(--color-pass)',
-                marginTop: 2,
-                flexShrink: 0,
-              }}>
-                <ShieldCheck size={28} />
-              </div>
+            <div className="flex items-start gap-12">
+              <ShieldCheck size={20} color="var(--color-pass)" style={{ marginTop: 2 }} />
               <div>
-                <div style={{ fontWeight: 600, fontSize: 16, color: 'var(--text-primary)' }}>
-                  Re-Audit Complete for {auditResultNotification.hostname} ({auditResultNotification.vendor})
+                <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' }}>
+                  Re-Audit Complete for {auditResultNotification.hostname}
                 </div>
-                <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 4 }}>
-                  Applied <strong>{auditResultNotification.appliedMappingsCount} verified training mappings</strong> during normalization!
+                <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 4 }}>
+                  Successfully applied <strong>{auditResultNotification.appliedMappingsCount} verified mappings</strong> during normalization.
                 </div>
 
                 <div className="flex items-center gap-16 mt-12 flex-wrap">
-                  <div style={{
-                    padding: '8px 14px',
-                    background: 'var(--bg-secondary)',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--border-color)',
-                  }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)', display: 'block' }}>Compliance Score</span>
+                  <div>
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Score</span>
                     <div className="flex items-center gap-8 mt-2">
-                      {auditResultNotification.previousScore !== undefined && auditResultNotification.previousScore !== auditResultNotification.score ? (
+                      {auditResultNotification.previousScore !== undefined && auditResultNotification.previousScore !== auditResultNotification.score && (
                         <>
-                          <span style={{ fontSize: 13, color: 'var(--text-tertiary)', textDecoration: 'line-through' }}>
-                            {auditResultNotification.previousScore}%
+                          <span style={{ fontSize: 13, color: 'var(--text-muted)', textDecoration: 'line-through', fontFeatureSettings: "'tnum'" }}>
+                            {auditResultNotification.previousScore}
                           </span>
-                          <ArrowRight size={14} style={{ color: 'var(--text-tertiary)' }} />
+                          <ArrowRight size={12} style={{ color: 'var(--text-muted)' }} />
                         </>
-                      ) : null}
-                      <span style={{ color: 'var(--color-pass)', fontWeight: 700, fontSize: 18 }}>
-                        {auditResultNotification.score}%
+                      )}
+                      <span style={{ color: 'var(--color-pass)', fontWeight: 700, fontSize: 18, fontFeatureSettings: "'tnum'" }}>
+                        {auditResultNotification.score}
                       </span>
                       {auditResultNotification.scoreImprovement > 0 && (
-                        <span className="badge badge-pass" style={{ fontSize: 11, padding: '2px 6px' }}>
-                          +{auditResultNotification.scoreImprovement}%
+                        <span className="badge badge-pass" style={{ fontSize: 10 }}>
+                          +{auditResultNotification.scoreImprovement}
                         </span>
                       )}
                     </div>
                   </div>
 
-                  <div style={{
-                    padding: '8px 14px',
-                    background: 'var(--bg-secondary)',
-                    borderRadius: 'var(--radius-sm)',
-                    border: '1px solid var(--border-color)',
-                  }}>
-                    <span style={{ fontSize: 12, color: 'var(--text-tertiary)', display: 'block' }}>Rule Verification</span>
-                    <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)' }}>
-                      {auditResultNotification.passed} passed / {auditResultNotification.failed} failed ({auditResultNotification.total} total)
-                    </span>
+                  <div>
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Rule Status</span>
+                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', marginTop: 6, fontFeatureSettings: "'tnum'" }}>
+                      <span style={{ color: 'var(--color-pass)' }}>{auditResultNotification.passed}</span> / <span style={{ color: 'var(--color-fail)' }}>{auditResultNotification.failed}</span>
+                      <span style={{ color: 'var(--text-muted)', fontWeight: 400, marginLeft: 4 }}>({auditResultNotification.total} total)</span>
+                    </div>
                   </div>
                 </div>
 
-                {auditResultNotification.passedRules && auditResultNotification.passedRules.length > 0 && (
-                  <div className="mt-12">
-                    <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>
-                      Successfully Recognized & Passed Rules:
+                {auditResultNotification.passedRules?.length > 0 && (
+                  <div className="mt-16">
+                    <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 6, textTransform: 'uppercase' }}>
+                      Newly Recognized Rules
                     </div>
-                    <div className="flex flex-wrap gap-8">
+                    <div className="flex flex-wrap gap-6">
                       {auditResultNotification.passedRules.slice(0, 5).map(r => (
-                        <span key={r.rule_id} className="badge badge-pass flex items-center gap-4" style={{ fontSize: 11, padding: '3px 8px' }}>
-                          <Check size={11} /> {r.rule_id}: {r.rule_name}
+                        <span key={r.rule_id} className="badge badge-neutral" style={{ fontSize: 10, fontFamily: 'var(--font-mono)' }}>
+                          <Check size={10} style={{ color: 'var(--color-pass)' }} /> {r.rule_id}
                         </span>
                       ))}
                       {auditResultNotification.passedRules.length > 5 && (
-                        <span className="badge badge-neutral" style={{ fontSize: 11, padding: '3px 8px' }}>
+                        <span className="badge badge-neutral" style={{ fontSize: 10 }}>
                           +{auditResultNotification.passedRules.length - 5} more
                         </span>
                       )}
@@ -350,7 +327,7 @@ export default function TrainingInterface() {
               className="btn btn-ghost btn-sm btn-icon"
               onClick={() => setAuditResultNotification(null)}
             >
-              <X size={16} />
+              <X size={14} />
             </button>
           </div>
         </div>
@@ -359,46 +336,36 @@ export default function TrainingInterface() {
       {/* Tabs */}
       <div className="tabs mb-20">
         <button className={`tab${tab === 'pending' ? ' active' : ''}`} onClick={() => setTab('pending')}>
-          Pending Training Queue ({pending.length})
+          Pending Queue ({pending.length})
         </button>
         <button className={`tab${tab === 'history' ? ' active' : ''}`} onClick={() => setTab('history')}>
-          Verified Learned Mappings ({verifiedMappings.length})
+          Verified Mappings ({verifiedMappings.length})
         </button>
       </div>
 
       {/* Pending Queue */}
       {tab === 'pending' && (
         pending.length === 0 ? (
-          <div className="card">
+          <div className="panel">
             <div className="empty-state" style={{ padding: 60 }}>
-              <div className="empty-state-icon"><Brain size={36} /></div>
-              <div className="empty-state-title">Training Queue Empty</div>
-              <div className="empty-state-text" style={{ maxWidth: 520, margin: '8px auto' }}>
-                All config commands from uploaded devices have been successfully recognized and normalized.
-                Click below to load an intentionally unknown demo configuration to test the AI training workflow.
+              <div className="empty-state-icon"><Brain size={24} /></div>
+              <div className="empty-state-title">Queue Empty</div>
+              <div className="empty-state-text">
+                All configuration commands from imported devices have been successfully recognized.
               </div>
-              <button
-                className="btn btn-primary mt-16 flex items-center gap-8"
-                style={{ margin: '16px auto 0' }}
-                disabled={demoLoading}
-                onClick={handleLoadDemoConfig}
-              >
-                {demoLoading ? <RefreshCw size={15} className="spinner" /> : <Play size={15} />}
-                <span>Load Demo Unknown Config</span>
-              </button>
             </div>
           </div>
         ) : (
           <div className="flex-col gap-16">
-            <div className="flex items-center justify-between">
-              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-                Review and map unknown CLI commands below. Once saved, they will be applied across future audits.
+            <div className="flex items-center justify-between mb-8">
+              <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
+                Review and map unknown CLI commands below.
               </span>
               <button
                 className="btn btn-ghost btn-sm flex items-center gap-6"
                 onClick={loadData}
               >
-                <RefreshCw size={13} /> Refresh Queue
+                <RefreshCw size={12} /> Refresh
               </button>
             </div>
 
@@ -409,98 +376,72 @@ export default function TrainingInterface() {
               } catch { /* empty */ }
 
               return (
-                <div key={item.id} className="card" style={{ borderLeft: '4px solid var(--color-warning)' }}>
-                  <div className="flex items-center justify-between mb-12">
-                    <div className="flex items-center gap-12">
-                      <span className="badge badge-accent" style={{ textTransform: 'capitalize', fontSize: 13, padding: '4px 10px' }}>
+                <div key={item.id} className="panel" style={{ borderLeft: '3px solid var(--color-warning)' }}>
+                  <div className="flex items-center justify-between mb-16">
+                    <div className="flex items-center gap-8">
+                      <span className="badge badge-accent" style={{ textTransform: 'capitalize' }}>
                         {item.vendor}
                       </span>
-                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                        Queue Item #{item.id}
+                      <span style={{ fontSize: 11, color: 'var(--text-tertiary)', fontFamily: 'var(--font-mono)' }}>
+                        Queue #{item.id}
                       </span>
                     </div>
-                    <button
-                      className="btn btn-sm btn-secondary flex items-center gap-6"
-                      onClick={() => handleAcceptSuggestion(item)}
-                    >
-                      <Sparkles size={14} /> Accept AI Suggestion
-                    </button>
+                    {editingId !== item.id && (
+                      <button
+                        className="btn btn-sm btn-primary"
+                        onClick={() => handleAcceptSuggestion(item)}
+                      >
+                        Map Command
+                      </button>
+                    )}
                   </div>
 
-                  {/* Raw command */}
                   <div className="mb-16">
-                    <label className="form-label" style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                      Raw Device Command
-                    </label>
-                    <code style={{
-                      display: 'block',
-                      padding: '12px 16px',
-                      background: 'var(--bg-primary)',
-                      borderRadius: 'var(--radius-sm)',
-                      fontSize: 13,
-                      color: 'var(--color-warning)',
-                      fontFamily: 'var(--font-mono)',
-                      whiteSpace: 'pre-wrap',
-                      wordBreak: 'break-all',
-                      border: '1px solid var(--border-color)',
-                    }}>
+                    <label className="form-label">Unrecognized Command</label>
+                    <div className="code-block" style={{ color: 'var(--color-warning)' }}>
                       {item.raw_command}
-                    </code>
+                    </div>
                   </div>
 
-                  {/* Context preview if available */}
                   {item.context_lines && (
                     <div className="mb-16">
-                      <label className="form-label" style={{ fontSize: 11, color: 'var(--text-tertiary)' }}>Surrounding Context</label>
-                      <pre style={{
-                        padding: '8px 12px',
-                        background: 'rgba(0,0,0,0.2)',
-                        borderRadius: 'var(--radius-sm)',
-                        fontSize: 11,
-                        color: 'var(--text-secondary)',
-                        fontFamily: 'var(--font-mono)',
-                        margin: 0,
-                        overflowX: 'auto',
-                        whiteSpace: 'pre-wrap',
-                        wordBreak: 'break-all',
-                        maxWidth: '100%',
-                      }}>
+                      <label className="form-label">Context</label>
+                      <div className="code-block" style={{ color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)' }}>
                         {item.context_lines}
-                      </pre>
+                      </div>
                     </div>
                   )}
 
-                  {/* AI Suggestion preview */}
-                  {suggestion.best_guess_key && (
+                  {suggestion.best_guess_key && editingId !== item.id && (
                     <div className="mb-16" style={{
-                      padding: '10px 14px',
-                      background: 'var(--accent-bg)',
+                      padding: '8px 12px',
+                      background: 'var(--accent-muted)',
+                      border: '1px solid var(--accent-border)',
                       borderRadius: 'var(--radius-sm)',
                       display: 'flex',
                       alignItems: 'center',
                       gap: 8,
                       fontSize: 12,
-                      color: 'var(--accent-light)',
+                      color: 'var(--text-primary)',
                     }}>
-                      <Sparkles size={15} />
+                      <Zap size={13} color="var(--accent-light)" />
                       <span>
-                        AI suggests mapping to <strong>{suggestion.best_guess_key}</strong> = <code>{String(suggestion.best_guess_value)}</code> (confidence: {Math.round((suggestion.confidence || 0.9) * 100)}%)
+                        AI suggests: <code style={{ fontFamily: 'var(--font-mono)' }}>{suggestion.best_guess_key}</code> = <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-pass)' }}>{String(suggestion.best_guess_value)}</code>
                       </span>
                     </div>
                   )}
 
-                  {/* Mapping form */}
                   {editingId === item.id && (
                     <div style={{
-                      padding: 20,
-                      background: 'var(--bg-primary)',
-                      borderRadius: 'var(--radius-md)',
-                      border: '1px solid var(--border-accent)',
-                      marginTop: 12,
+                      padding: 16,
+                      background: 'var(--bg-tertiary)',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1px solid var(--border-primary)',
+                      marginTop: 16,
                     }}>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16 }}>
                         <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label className="form-label">Compliance Category</label>
+                          <label className="form-label">Category</label>
                           <select
                             className="form-select"
                             value={formData.category}
@@ -514,14 +455,14 @@ export default function TrainingInterface() {
                         </div>
 
                         <div className="form-group" style={{ marginBottom: 0 }}>
-                          <label className="form-label">Normalized Schema Key</label>
+                          <label className="form-label">Schema Key</label>
                           {currentPresets.length > 0 ? (
                             <select
                               className="form-select"
                               value={formData.key}
                               onChange={(e) => handlePresetSelect(e.target.value)}
                             >
-                              <option value="">Select Normalized Key…</option>
+                              <option value="">Select Key…</option>
                               {currentPresets.map(p => (
                                 <option key={p.key} value={p.key}>{p.label} ({p.key})</option>
                               ))}
@@ -540,35 +481,21 @@ export default function TrainingInterface() {
                           <label className="form-label">Normalized Value</label>
                           <input
                             className="form-input"
-                            placeholder="e.g. 2, true, false, 900"
+                            placeholder="Value"
                             value={formData.value}
                             onChange={(e) => setFormData({ ...formData, value: e.target.value })}
                           />
                         </div>
                       </div>
 
-                      <div className="flex gap-12 mt-16" style={{ justifyContent: 'flex-end' }}>
+                      <div className="flex gap-8 mt-16" style={{ justifyContent: 'flex-end' }}>
                         <button className="btn btn-ghost btn-sm" onClick={() => setEditingId(null)}>
-                          <X size={14} /> Cancel
+                          Cancel
                         </button>
-                        <button className="btn btn-success btn-sm flex items-center gap-6" onClick={() => handleSubmitMapping(item.id)}>
-                          <Check size={14} /> Save & Verify Mapping
+                        <button className="btn btn-success btn-sm" onClick={() => handleSubmitMapping(item.id)}>
+                          <Check size={12} /> Save Mapping
                         </button>
                       </div>
-                    </div>
-                  )}
-
-                  {editingId !== item.id && (
-                    <div className="flex gap-12 items-center mt-8">
-                      <button
-                        className="btn btn-primary btn-sm flex items-center gap-6"
-                        onClick={() => {
-                          setEditingId(item.id)
-                          handleAcceptSuggestion(item)
-                        }}
-                      >
-                        <ChevronRight size={14} /> Configure Mapping
-                      </button>
                     </div>
                   )}
                 </div>
@@ -581,32 +508,27 @@ export default function TrainingInterface() {
       {/* History & Active Learned Mappings Tab */}
       {tab === 'history' && (
         <div className="flex-col gap-24">
-          {/* Action Header with devices to re-audit */}
-          <div className="card">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 style={{ fontSize: 16, fontWeight: 600, margin: 0, color: 'var(--text-primary)' }}>
-                  Re-Audit Devices with Learned Mappings
-                </h3>
-                <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: '4px 0 0 0' }}>
-                  Trigger an immediate compliance re-audit on any device to evaluate it against the newly learned CLI mappings.
-                </p>
-              </div>
+          <div className="panel">
+            <div className="panel-header" style={{ marginBottom: 12 }}>
+              <span className="panel-title">Apply Mappings to Devices</span>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
+              Trigger a re-audit to apply newly learned mappings to existing devices.
             </div>
 
-            <div className="flex flex-wrap gap-12 mt-16">
+            <div className="flex flex-wrap gap-8">
               {devices.length === 0 ? (
-                <div style={{ fontSize: 13, color: 'var(--text-tertiary)' }}>No devices ingested yet.</div>
+                <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>No devices imported.</div>
               ) : (
                 devices.map(device => (
                   <button
                     key={device.id}
-                    className="btn btn-secondary btn-sm flex items-center gap-8"
+                    className="btn btn-secondary btn-sm"
                     disabled={reAuditing[device.id]}
                     onClick={() => handleReAudit(device)}
                   >
-                    <RefreshCw size={14} className={reAuditing[device.id] ? 'spinner' : ''} />
-                    <span>Re-Audit <strong>{device.hostname}</strong> ({device.vendor})</span>
+                    {reAuditing[device.id] ? <div className="spinner" /> : <RefreshCw size={12} />}
+                    Re-Audit <span style={{ fontFamily: 'var(--font-mono)', marginLeft: 4 }}>{device.hostname}</span>
                   </button>
                 ))
               )}
@@ -620,14 +542,14 @@ export default function TrainingInterface() {
                   <th>Vendor</th>
                   <th>Raw Command</th>
                   <th>Category</th>
-                  <th>Normalized Key → Value</th>
+                  <th>Target Schema Key</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {mappings.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center" style={{ padding: 40, color: 'var(--text-tertiary)' }}>No mappings learned yet</td></tr>
+                  <tr><td colSpan={6} className="text-center" style={{ padding: 40, color: 'var(--text-tertiary)' }}>No verified mappings.</td></tr>
                 ) : (
                   mappings.map((m) => (
                     <tr key={m.id}>
@@ -636,32 +558,33 @@ export default function TrainingInterface() {
                           {m.vendor}
                         </span>
                       </td>
-                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, maxWidth: 300, whiteSpace: 'normal', wordBreak: 'break-all', overflowWrap: 'anywhere' }}>
-                        {m.raw_command}
+                      <td>
+                        <code style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--text-secondary)' }}>
+                          {m.raw_command}
+                        </code>
                       </td>
                       <td>
                         <span className="badge badge-neutral" style={{ textTransform: 'capitalize' }}>
                           {m.security_category || '—'}
                         </span>
                       </td>
-                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, minWidth: 0, maxWidth: 260, wordBreak: 'break-all', overflowWrap: 'anywhere' }}>
+                      <td>
                         {m.normalized_key ? (
-                          <div className="flex items-center gap-6">
-                            <span style={{ color: 'var(--accent-light)' }}>{m.normalized_key}</span>
-                            <ArrowRight size={12} style={{ color: 'var(--text-tertiary)' }} />
-                            <strong style={{ color: 'var(--color-pass)' }}>{m.normalized_value}</strong>
+                          <div className="flex items-center gap-6" style={{ fontFamily: 'var(--font-mono)', fontSize: 11 }}>
+                            <span style={{ color: 'var(--text-primary)' }}>{m.normalized_key}</span>
+                            <span style={{ color: 'var(--text-muted)' }}>=</span>
+                            <span style={{ color: 'var(--color-pass)' }}>{m.normalized_value}</span>
                           </div>
                         ) : '—'}
                       </td>
                       <td>
-                        <span className={`badge ${m.is_verified ? 'badge-pass' : 'badge-warning'} flex items-center gap-4`}>
-                          {m.is_verified ? <Check size={12} /> : null}
-                          {m.is_verified ? 'Verified & Active' : 'Pending'}
+                        <span className={`badge ${m.is_verified ? 'badge-pass' : 'badge-warning'}`}>
+                          {m.is_verified ? 'Active' : 'Pending'}
                         </span>
                       </td>
-                      <td>
-                        <button className="btn btn-danger btn-sm btn-icon" title="Delete mapping" onClick={() => handleDeleteMapping(m.id)}>
-                          <Trash2 size={14} />
+                      <td style={{ textAlign: 'right' }}>
+                        <button className="btn btn-danger btn-sm btn-icon" onClick={() => handleDeleteMapping(m.id)}>
+                          <Trash2 size={12} />
                         </button>
                       </td>
                     </tr>

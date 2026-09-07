@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { FileText, RefreshCw, Download, Play } from 'lucide-react'
+import { FileText, RefreshCw, Play, Copy, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 import ScoreGauge from '../components/ScoreGauge'
-import { ComplianceTable } from '../components/ComplianceCard'
+import { StatusBadge, SeverityBadge } from '../components/StatusBadge'
 import {
   getDevice,
   getAuditResults,
@@ -14,6 +14,111 @@ import {
 } from '../services/api'
 
 const FRAMEWORKS = ['CIS', 'NIST', 'STIG']
+
+function CopyButton({ text }) {
+  const [copied, setCopied] = useState(false)
+  const handleCopy = async (e) => {
+    e.stopPropagation()
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    } catch { /* empty */ }
+  }
+  return (
+    <button
+      className={`copy-btn${copied ? ' copied' : ''}`}
+      onClick={handleCopy}
+      title="Copy to clipboard"
+    >
+      {copied ? <><Check size={10} /> Copied</> : <><Copy size={10} /> Copy</>}
+    </button>
+  )
+}
+
+function FindingsTable({ results }) {
+  const [expandedRow, setExpandedRow] = useState(null)
+
+  if (!results?.length) {
+    return (
+      <div className="empty-state" style={{ padding: 48 }}>
+        <div className="empty-state-title">No Results</div>
+        <div className="empty-state-text">Run a compliance assessment to view findings.</div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="table-container">
+      <table className="data-table">
+        <thead>
+          <tr>
+            <th style={{ width: 28 }}></th>
+            <th>Rule ID</th>
+            <th>Control</th>
+            <th>Status</th>
+            <th>Severity</th>
+            <th>Category</th>
+          </tr>
+        </thead>
+        <tbody>
+          {results.map((r, i) => (
+            <tr key={r.rule_id + '-' + i} style={{ cursor: 'pointer' }}>
+              <td
+                colSpan={6}
+                style={{ padding: 0, border: 'none' }}
+              >
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <tbody>
+                    <tr
+                      onClick={() => setExpandedRow(expandedRow === i ? null : i)}
+                      style={{ cursor: 'pointer' }}
+                      className={expandedRow === i ? '' : ''}
+                    >
+                      <td style={{ width: 28, padding: '10px 14px', borderBottom: expandedRow === i ? 'none' : '1px solid var(--border-secondary)' }}>
+                        <span style={{ color: 'var(--text-muted)', fontSize: 10, transition: 'transform 0.15s', display: 'inline-block', transform: expandedRow === i ? 'rotate(90deg)' : 'none' }}>▶</span>
+                      </td>
+                      <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, padding: '10px 14px', borderBottom: expandedRow === i ? 'none' : '1px solid var(--border-secondary)' }}>{r.rule_id}</td>
+                      <td style={{ padding: '10px 14px', borderBottom: expandedRow === i ? 'none' : '1px solid var(--border-secondary)', fontSize: 13 }}>{r.rule_name}</td>
+                      <td style={{ padding: '10px 14px', borderBottom: expandedRow === i ? 'none' : '1px solid var(--border-secondary)' }}><StatusBadge status={r.status} /></td>
+                      <td style={{ padding: '10px 14px', borderBottom: expandedRow === i ? 'none' : '1px solid var(--border-secondary)' }}><SeverityBadge severity={r.severity} /></td>
+                      <td style={{ padding: '10px 14px', borderBottom: expandedRow === i ? 'none' : '1px solid var(--border-secondary)' }}><span className="badge badge-neutral">{r.category}</span></td>
+                    </tr>
+                    {expandedRow === i && (
+                      <tr className="expandable-row-detail">
+                        <td colSpan={6} style={{ padding: 0, borderBottom: '1px solid var(--border-secondary)' }}>
+                          <div className="detail-grid" style={{ gridTemplateColumns: r.remediation ? '1fr 1fr 1fr' : '1fr 1fr' }}>
+                            <div className="detail-item">
+                              <label>Expected Value</label>
+                              <code>{r.expected_value || 'N/A'}</code>
+                            </div>
+                            <div className="detail-item">
+                              <label>Actual Value</label>
+                              <code>{r.actual_value || 'not configured'}</code>
+                            </div>
+                            {r.remediation && (
+                              <div className="detail-item">
+                                <label>Remediation</label>
+                                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                                  <code style={{ flex: 1 }}>{r.remediation}</code>
+                                  <CopyButton text={r.remediation} />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
 
 export default function AuditResults() {
   const { deviceId } = useParams()
@@ -31,7 +136,6 @@ export default function AuditResults() {
     try {
       const dev = await getDevice(deviceId)
       setDevice(dev)
-
       try {
         const [res, sum] = await Promise.all([
           getAuditResults(deviceId, fw),
@@ -55,10 +159,10 @@ export default function AuditResults() {
     setAuditing(true)
     try {
       await triggerAudit(Number(deviceId), framework)
-      toast.success(`${framework} audit complete!`)
+      toast.success(`${framework} assessment complete`)
       await loadData(framework)
     } catch (err) {
-      toast.error(err.response?.data?.detail || 'Audit failed')
+      toast.error(err.response?.data?.detail || 'Assessment failed')
     }
     setAuditing(false)
   }
@@ -67,8 +171,7 @@ export default function AuditResults() {
     setGenerating(true)
     try {
       const report = await generateReport(Number(deviceId), framework)
-      toast.success('PDF report generated!')
-      // Trigger download
+      toast.success('PDF report generated')
       window.open(getReportDownloadUrl(report.id), '_blank')
     } catch (err) {
       toast.error(err.response?.data?.detail || 'Report generation failed')
@@ -77,55 +180,75 @@ export default function AuditResults() {
   }
 
   if (loading) {
-    return <div className="loading-overlay"><div className="spinner" /> Loading audit results…</div>
+    return (
+      <div className="loading-overlay">
+        <div className="spinner" />
+        <span>Loading assessment results…</span>
+        <span className="loading-message">Retrieving compliance data from audit engine</span>
+      </div>
+    )
   }
+
+  // Count findings by status
+  const failCount = results.filter(r => r.status === 'fail').length
+  const passCount = results.filter(r => r.status === 'pass').length
+  const warnCount = results.filter(r => r.status === 'warning').length
+  const naCount = results.filter(r => r.status === 'not_applicable').length
 
   return (
     <div>
       <div className="page-header">
         <div className="page-header-row">
           <div>
-            <h1 className="page-title">Audit Results</h1>
+            <h1 className="page-title">Compliance Assessment</h1>
             <p className="page-subtitle">
-              {device?.hostname} — {device?.vendor} {device?.model}
+              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{device?.hostname}</span>
+              {' — '}
+              <span style={{ textTransform: 'capitalize' }}>{device?.vendor}</span>
+              {' '}{device?.model}
             </p>
           </div>
-          <div className="flex gap-12">
+          <div className="flex gap-8">
             <button
               className="btn btn-primary"
               onClick={handleRunAudit}
               disabled={auditing}
             >
-              {auditing ? <><div className="spinner" /> Running…</> : <><Play size={16} /> Run Audit</>}
+              {auditing ? <><div className="spinner" /> Running…</> : <><Play size={14} /> Run Audit</>}
             </button>
             <button
               className="btn btn-secondary"
               onClick={handleGenerateReport}
               disabled={generating || !results.length}
             >
-              {generating ? <><div className="spinner" /> Generating…</> : <><FileText size={16} /> Generate PDF</>}
+              {generating ? <><div className="spinner" /> Generating…</> : <><FileText size={14} /> Generate PDF</>}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Device Info Bar */}
+      {/* Device summary bar */}
       {device && (
-        <div className="card mb-24">
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 16 }}>
+        <div className="panel mb-20">
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 14 }}>
             {[
-              ['Hostname', device.hostname],
-              ['Vendor', device.vendor],
-              ['Model', device.model],
-              ['OS', device.os_version],
-              ['Type', device.device_type],
-              ['Serial', device.serial_number],
-            ].map(([label, val]) => (
+              ['Hostname', device.hostname, true],
+              ['Vendor', device.vendor, false],
+              ['Model', device.model, false],
+              ['OS', device.os_version, true],
+              ['Type', device.device_type, false],
+              ['Serial', device.serial_number, true],
+            ].map(([label, val, mono]) => (
               <div key={label}>
-                <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                <div style={{ fontSize: 10, fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.4px', color: 'var(--text-muted)', marginBottom: 3 }}>
                   {label}
                 </div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-primary)', textTransform: 'capitalize' }}>
+                <div style={{
+                  fontSize: 13, fontWeight: 500, color: 'var(--text-primary)',
+                  textTransform: label === 'Vendor' || label === 'Type' ? 'capitalize' : 'none',
+                  fontFamily: mono ? 'var(--font-mono)' : 'inherit',
+                  fontSize: mono ? 12 : 13,
+                }}>
                   {val || 'Unknown'}
                 </div>
               </div>
@@ -149,31 +272,45 @@ export default function AuditResults() {
 
       {/* Score + Results */}
       {summary ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 200px) minmax(0, 1fr)', gap: 24 }}>
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-            <ScoreGauge score={summary.compliance_score} size={150} label={`${framework} Score`} />
-            <div style={{ marginTop: 16, textAlign: 'center' }}>
-              <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>
-                {summary.passed} passed · {summary.failed} failed
+        <>
+          {/* Score overview strip */}
+          <div className="panel mb-20">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap' }}>
+              <ScoreGauge score={summary.compliance_score} size={100} label={`${framework} Score`} />
+              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+                {[
+                  { label: 'Pass', count: passCount, cls: 'badge-pass' },
+                  { label: 'Fail', count: failCount, cls: 'badge-fail' },
+                  { label: 'Warning', count: warnCount, cls: 'badge-warning' },
+                  { label: 'N/A', count: naCount, cls: 'badge-na' },
+                ].map(s => (
+                  <div key={s.label} style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 22, fontWeight: 700, fontFeatureSettings: "'tnum'" }}>
+                      {s.count}
+                    </div>
+                    <span className={`badge ${s.cls}`} style={{ fontSize: 10 }}>{s.label}</span>
+                  </div>
+                ))}
               </div>
-              <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 4 }}>
-                {summary.warnings} warnings · {summary.total_rules} total
+              <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-tertiary)' }}>
+                {summary.total_rules} total controls evaluated
               </div>
             </div>
           </div>
 
-          <ComplianceTable results={results} vendor={device?.vendor} />
-        </div>
+          {/* Findings table */}
+          <FindingsTable results={results} />
+        </>
       ) : (
-        <div className="card">
+        <div className="panel">
           <div className="empty-state" style={{ padding: 60 }}>
-            <div className="empty-state-icon"><RefreshCw size={32} /></div>
-            <div className="empty-state-title">No {framework} Audit Results</div>
+            <div className="empty-state-icon"><RefreshCw size={20} /></div>
+            <div className="empty-state-title">No {framework} Assessment Data</div>
             <div className="empty-state-text">
-              Click "Run Audit" to perform a {framework} compliance check on this device.
+              Run a {framework} compliance assessment to evaluate this device against security controls.
             </div>
             <button className="btn btn-primary" onClick={handleRunAudit} disabled={auditing}>
-              <Play size={16} /> Run {framework} Audit
+              <Play size={14} /> Run {framework} Assessment
             </button>
           </div>
         </div>

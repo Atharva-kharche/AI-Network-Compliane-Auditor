@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react'
-import { UploadCloud, FileText, CheckCircle, Loader } from 'lucide-react'
+import { UploadCloud, FileText, CheckCircle, Loader, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { uploadConfig } from '../services/api'
 
 export default function FileUploader({ onUploadSuccess }) {
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  const [uploadStage, setUploadStage] = useState('')
   const [uploadResult, setUploadResult] = useState(null)
   const fileInputRef = useRef(null)
 
@@ -34,28 +35,35 @@ export default function FileUploader({ onUploadSuccess }) {
   const handleFileSelect = (e) => {
     const files = e.target.files
     if (files?.length) handleFile(files[0])
-    e.target.value = '' // Reset for re-upload
+    e.target.value = ''
   }
 
   const handleFile = async (file) => {
-    const allowedExtensions = ['.txt', '.conf', '.cfg', '.json']
+    const allowedExtensions = ['.txt', '.conf', '.cfg', '.json', '.log']
     const ext = '.' + file.name.split('.').pop().toLowerCase()
     if (!allowedExtensions.includes(ext)) {
-      toast.error(`Unsupported file type: ${ext}. Allowed: ${allowedExtensions.join(', ')}`)
+      toast.error(`Unsupported file type: ${ext}`)
       return
     }
 
     setIsUploading(true)
     setUploadResult(null)
+    setUploadStage('Importing configuration…')
 
     try {
+      // Simulate staged progress for UX
+      setTimeout(() => setUploadStage('Detecting vendor…'), 400)
+      setTimeout(() => setUploadStage('Normalizing security model…'), 800)
+
       const result = await uploadConfig(file)
+      setUploadStage('')
       setUploadResult(result)
-      toast.success(result.message || 'Config uploaded successfully!')
+      toast.success('Configuration imported successfully')
       onUploadSuccess?.(result)
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Upload failed. Please try again.'
+      const msg = err.response?.data?.detail || 'Import failed. Check the file and try again.'
       toast.error(msg)
+      setUploadStage('')
     } finally {
       setIsUploading(false)
     }
@@ -70,49 +78,75 @@ export default function FileUploader({ onUploadSuccess }) {
         onDragOver={handleDrag}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
+        role="button"
+        tabIndex={0}
+        aria-label="Upload configuration file"
+        onKeyDown={(e) => e.key === 'Enter' && fileInputRef.current?.click()}
       >
         <input
           ref={fileInputRef}
           type="file"
-          accept=".txt,.conf,.cfg,.json"
+          accept=".txt,.conf,.cfg,.json,.log"
           onChange={handleFileSelect}
           style={{ display: 'none' }}
+          aria-hidden="true"
         />
 
         {isUploading ? (
           <>
             <div className="upload-zone-icon">
-              <Loader size={28} className="animate-pulse" />
+              <Loader size={22} className="animate-pulse" />
             </div>
-            <div className="upload-zone-title">Uploading & Parsing…</div>
-            <div className="upload-zone-subtitle">Detecting vendor and normalizing configuration</div>
+            <div className="upload-zone-title">{uploadStage || 'Processing…'}</div>
+            <div className="upload-zone-subtitle">Analyzing vendor configuration</div>
           </>
         ) : (
           <>
             <div className="upload-zone-icon">
-              <UploadCloud size={28} />
+              <UploadCloud size={22} />
             </div>
             <div className="upload-zone-title">
-              Drop config file here or <span style={{ color: 'var(--accent-light)' }}>browse</span>
+              Drop configuration file here or <span style={{ color: 'var(--accent-light)' }}>browse</span>
             </div>
             <div className="upload-zone-subtitle">
-              Supports .txt, .conf, .cfg, .json — Cisco, Palo Alto, Juniper, Arista, SONiC and more
+              TXT · CFG · CONF · LOG · JSON — Vendor detection is automatic
             </div>
           </>
         )}
       </div>
 
       {uploadResult && (
-        <div className="card mt-24" style={{ borderColor: 'rgba(16, 185, 129, 0.3)' }}>
-          <div className="flex items-center gap-12 mb-16">
-            <CheckCircle size={20} color="var(--color-success)" />
-            <span style={{ fontWeight: 600, color: 'var(--color-success)' }}>Upload Successful</span>
+        <div className="panel mt-16" style={{ borderColor: 'var(--color-pass-border)' }}>
+          {/* Workflow completion indicator */}
+          <div className="flex items-center gap-8 mb-12">
+            <CheckCircle size={16} color="var(--color-pass)" />
+            <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--color-pass)' }}>Configuration Imported</span>
+          </div>
+
+          {/* Workflow steps visualization */}
+          <div className="flex items-center gap-4 mb-16" style={{ flexWrap: 'wrap' }}>
+            {[
+              { label: 'Import', done: true },
+              { label: 'Identify', done: true },
+              { label: 'Normalize', done: true },
+              { label: 'Ready', done: true },
+            ].map((step, i) => (
+              <div key={step.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                {i > 0 && <span style={{ width: 16, height: 1, background: 'var(--color-pass-border)', display: 'block' }} />}
+                <span style={{
+                  display: 'flex', alignItems: 'center', gap: 4,
+                  fontSize: 11, color: 'var(--color-pass)', fontWeight: 500,
+                }}>
+                  <Check size={11} /> {step.label}
+                </span>
+              </div>
+            ))}
           </div>
 
           <div className="detail-grid" style={{ margin: 0 }}>
             <div className="detail-item">
               <label>Hostname</label>
-              <span>{uploadResult.device?.hostname}</span>
+              <span style={{ fontFamily: 'var(--font-mono)' }}>{uploadResult.device?.hostname}</span>
             </div>
             <div className="detail-item">
               <label>Vendor</label>
@@ -130,11 +164,11 @@ export default function FileUploader({ onUploadSuccess }) {
             </div>
             <div className="detail-item">
               <label>OS Version</label>
-              <span>{uploadResult.device?.os_version}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{uploadResult.device?.os_version}</span>
             </div>
             <div className="detail-item">
               <label>Filename</label>
-              <span>{uploadResult.config_file?.filename}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12 }}>{uploadResult.config_file?.filename}</span>
             </div>
           </div>
         </div>
