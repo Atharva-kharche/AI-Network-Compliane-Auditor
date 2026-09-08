@@ -147,9 +147,9 @@ export default function Dashboard() {
         <div className="panel">
           <div className="empty-state" style={{ padding: 80 }}>
             <div className="empty-state-icon"><Shield size={28} /></div>
-            <div className="empty-state-title">Welcome to NetAudit AI</div>
+            <div className="empty-state-title">NO AUDITS YET</div>
             <div className="empty-state-text">
-              Start by importing a network device configuration file to begin your first compliance assessment.
+              Import a network configuration to begin your first compliance assessment.
             </div>
             <button className="btn btn-primary" onClick={() => navigate('/upload')}>
               <Upload size={15} /> Import Configuration
@@ -188,26 +188,45 @@ export default function Dashboard() {
       </div>
 
       {/* Primary metrics */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-card-icon accent"><Server size={17} /></div>
-          <div className="stat-card-value">{stats.total_devices}</div>
-          <div className="stat-card-label">Devices Monitored</div>
+      <div className="panel mb-24" style={{ display: 'flex', flexWrap: 'wrap', gap: 24 }}>
+        <div style={{ flex: '1 1 300px', borderRight: '1px solid var(--border-primary)', paddingRight: 24 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 16 }}>
+            Compliance Posture
+          </div>
+          <div className="flex items-end gap-16 mb-8">
+            <span style={{ fontSize: 56, fontWeight: 800, lineHeight: 1, fontFeatureSettings: "'tnum'", color: stats.average_compliance_score >= 80 ? 'var(--color-pass)' : stats.average_compliance_score >= 50 ? 'var(--color-warning)' : 'var(--color-fail)' }}>
+              {Math.round(stats.average_compliance_score)}%
+            </span>
+            <div className={`badge ${stats.average_compliance_score >= 80 ? 'badge-pass' : stats.average_compliance_score >= 50 ? 'badge-warning' : 'badge-fail'}`} style={{ marginBottom: 8, fontSize: 12, padding: '4px 10px' }}>
+              {stats.average_compliance_score >= 80 ? 'PASSING' : stats.average_compliance_score >= 50 ? 'NEEDS ATTENTION' : 'CRITICAL'}
+            </div>
+          </div>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+            Security posture across {stats.total_devices} monitored device{stats.total_devices !== 1 ? 's' : ''}
+          </div>
+          
+          <div className="score-meter" style={{ maxWidth: '100%', marginTop: 24, height: 6 }}>
+            <div className="score-meter-fill" style={{ width: `${stats.average_compliance_score}%`, background: stats.average_compliance_score >= 80 ? 'var(--color-pass)' : stats.average_compliance_score >= 50 ? 'var(--color-warning)' : 'var(--color-fail)' }} />
+          </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-card-icon success"><TrendingUp size={17} /></div>
-          <div className="stat-card-value">{stats.average_compliance_score}%</div>
-          <div className="stat-card-label">Avg Compliance Score</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card-icon danger"><ShieldAlert size={17} /></div>
-          <div className="stat-card-value">{stats.critical_findings}</div>
-          <div className="stat-card-label">Critical Findings</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-card-icon warning"><AlertTriangle size={17} /></div>
-          <div className="stat-card-value">{stats.high_findings}</div>
-          <div className="stat-card-label">High Findings</div>
+        
+        <div style={{ flex: '2 1 400px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 16, alignContent: 'center' }}>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: 8 }}>Devices</div>
+            <div style={{ fontSize: 24, fontWeight: 700 }}>{stats.total_devices}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase', marginBottom: 8 }}>Audits</div>
+            <div style={{ fontSize: 24, fontWeight: 700 }}>{stats.total_audits}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--color-critical)', textTransform: 'uppercase', marginBottom: 8 }}>Critical</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-critical)' }}>{stats.critical_findings}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: 'var(--color-high)', textTransform: 'uppercase', marginBottom: 8 }}>High</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: 'var(--color-high)' }}>{stats.high_findings}</div>
+          </div>
         </div>
       </div>
 
@@ -245,6 +264,7 @@ export default function Dashboard() {
                   fill="var(--accent)"
                   radius={[3, 3, 0, 0]}
                   maxBarSize={40}
+                  label={{ position: 'top', fill: 'var(--text-primary)', fontSize: 11, fontWeight: 600, formatter: (val) => `${val}%` }}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -270,20 +290,22 @@ export default function Dashboard() {
           {totalFindings > 0 ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '8px 0' }}>
               {severities.map(s => (
-                <div key={s.label} className="severity-bar">
-                  <span className="severity-bar-label" style={{ color: s.color }}>{s.label}</span>
-                  <div className="severity-bar-track">
+                <div key={s.label} style={{ marginBottom: 14 }}>
+                  <div className="flex justify-between items-center mb-6">
+                    <span style={{ fontSize: 11, fontWeight: 700, color: s.count > 0 ? s.color : 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{s.label}</span>
+                    <span style={{ fontSize: 13, fontWeight: 700, fontFeatureSettings: "'tnum'", color: s.count > 0 ? 'var(--text-primary)' : 'var(--text-muted)' }}>{s.count}</span>
+                  </div>
+                  <div style={{ height: 4, background: 'var(--bg-tertiary)', borderRadius: 2, overflow: 'hidden' }}>
                     <div
-                      className="severity-bar-fill"
                       style={{
                         width: `${(s.count / maxSeverity) * 100}%`,
                         background: s.color,
+                        height: '100%',
+                        borderRadius: 2,
+                        transition: 'width 0.6s ease'
                       }}
                     />
                   </div>
-                  <span className="severity-bar-count" style={{ color: s.count > 0 ? s.color : 'var(--text-muted)' }}>
-                    {s.count}
-                  </span>
                 </div>
               ))}
             </div>
@@ -309,7 +331,7 @@ export default function Dashboard() {
               <thead>
                 <tr>
                   <th>Type</th>
-                  <th>Description</th>
+                  <th>Event</th>
                   <th>Time</th>
                   <th></th>
                 </tr>
@@ -317,22 +339,21 @@ export default function Dashboard() {
               <tbody>
                 {stats.recent_activity.map((a, i) => (
                   <tr key={i}>
-                    <td>
-                      <span className={`badge ${a.type === 'upload' ? 'badge-accent' : 'badge-pass'}`}>
-                        {a.type === 'upload' ? <Upload size={10} /> : <ShieldCheck size={10} />}
+                    <td style={{ width: 100 }}>
+                      <span className={`badge ${a.type === 'upload' ? 'badge-accent' : 'badge-pass'}`} style={{ textTransform: 'uppercase' }}>
                         {a.type}
                       </span>
                     </td>
-                    <td>{a.description}</td>
-                    <td style={{ color: 'var(--text-tertiary)', fontSize: 12, fontFamily: 'var(--font-mono)' }}>
+                    <td style={{ fontWeight: 500 }}>{a.description}</td>
+                    <td style={{ color: 'var(--text-tertiary)', fontSize: 11, fontFamily: 'var(--font-mono)' }}>
                       {new Date(a.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
                     </td>
-                    <td>
+                    <td style={{ textAlign: 'right' }}>
                       <button
                         className="btn btn-ghost btn-sm"
                         onClick={() => navigate(`/devices/${a.device_id}`)}
                       >
-                        View
+                        View Device
                       </button>
                     </td>
                   </tr>
@@ -343,8 +364,8 @@ export default function Dashboard() {
         ) : (
           <div className="empty-state" style={{ padding: 40 }}>
             <div className="empty-state-icon"><Activity size={20} /></div>
-            <div className="empty-state-title">No Recent Activity</div>
-            <div className="empty-state-text">Upload a configuration file to get started</div>
+            <div className="empty-state-title">NO RECENT ACTIVITY</div>
+            <div className="empty-state-text">Import a network configuration to begin your first compliance assessment.</div>
             <button className="btn btn-primary" onClick={() => navigate('/upload')}>
               <Upload size={14} /> Import Configuration
             </button>

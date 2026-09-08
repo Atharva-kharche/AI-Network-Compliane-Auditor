@@ -124,23 +124,12 @@ export default function FileUploader({ onUploadSuccess }) {
           </div>
 
           {/* Workflow steps visualization */}
-          <div className="flex items-center gap-4 mb-16" style={{ flexWrap: 'wrap' }}>
-            {[
-              { label: 'Import', done: true },
-              { label: 'Identify', done: true },
-              { label: 'Normalize', done: true },
-              { label: 'Ready', done: true },
-            ].map((step, i) => (
-              <div key={step.label} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                {i > 0 && <span style={{ width: 16, height: 1, background: 'var(--color-pass-border)', display: 'block' }} />}
-                <span style={{
-                  display: 'flex', alignItems: 'center', gap: 4,
-                  fontSize: 11, color: 'var(--color-pass)', fontWeight: 500,
-                }}>
-                  <Check size={11} /> {step.label}
-                </span>
-              </div>
-            ))}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-secondary)', marginBottom: 20, padding: 16, background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-primary)' }}>
+            <div style={{ color: 'var(--color-pass)' }}>✓ Imported</div>
+            <div style={{ color: 'var(--color-pass)' }}>✓ Vendor identified — <span style={{ textTransform: 'capitalize' }}>{uploadResult.device?.vendor}</span></div>
+            <div style={{ color: 'var(--color-pass)' }}>✓ Normalized security model</div>
+            <div>○ Compliance assessment (Pending)</div>
+            <div>○ Report (Pending)</div>
           </div>
 
           <div className="detail-grid" style={{ margin: 0 }}>

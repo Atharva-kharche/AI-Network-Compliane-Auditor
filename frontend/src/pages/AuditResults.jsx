@@ -42,8 +42,8 @@ function FindingsTable({ results }) {
   if (!results?.length) {
     return (
       <div className="empty-state" style={{ padding: 48 }}>
-        <div className="empty-state-title">No Results</div>
-        <div className="empty-state-text">Run a compliance assessment to view findings.</div>
+        <div className="empty-state-title">NO SECURITY FINDINGS</div>
+        <div className="empty-state-text">Run a compliance assessment to evaluate against the framework.</div>
       </div>
     )
   }
@@ -274,28 +274,64 @@ export default function AuditResults() {
       {summary ? (
         <>
           {/* Score overview strip */}
-          <div className="panel mb-20">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 32, flexWrap: 'wrap' }}>
-              <ScoreGauge score={summary.compliance_score} size={100} label={`${framework} Score`} />
-              <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-                {[
-                  { label: 'Pass', count: passCount, cls: 'badge-pass' },
-                  { label: 'Fail', count: failCount, cls: 'badge-fail' },
-                  { label: 'Warning', count: warnCount, cls: 'badge-warning' },
-                  { label: 'N/A', count: naCount, cls: 'badge-na' },
-                ].map(s => (
-                  <div key={s.label} style={{ textAlign: 'center' }}>
-                    <div style={{ fontSize: 22, fontWeight: 700, fontFeatureSettings: "'tnum'" }}>
-                      {s.count}
-                    </div>
-                    <span className={`badge ${s.cls}`} style={{ fontSize: 10 }}>{s.label}</span>
+          <div className="panel mb-20" style={{ borderTop: `4px solid ${summary.compliance_score >= 80 ? 'var(--color-pass)' : summary.compliance_score >= 50 ? 'var(--color-warning)' : 'var(--color-fail)'}` }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 32 }}>
+              
+              <div style={{ flex: '1 1 auto' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}>
+                  AUDIT COMPLETE
+                </div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
+                  {device.hostname}
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+                  <span style={{ textTransform: 'capitalize' }}>{device.vendor}</span> {device.os_version} · {framework} Framework
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 32, paddingLeft: 32, borderLeft: '1px solid var(--border-primary)' }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>
+                    COMPLIANCE SCORE
                   </div>
-                ))}
+                  <div style={{ fontSize: 36, fontWeight: 800, lineHeight: 1, fontFeatureSettings: "'tnum'", color: summary.compliance_score >= 80 ? 'var(--color-pass)' : summary.compliance_score >= 50 ? 'var(--color-warning)' : 'var(--color-fail)' }}>
+                    {summary.compliance_score}%
+                  </div>
+                </div>
+                
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
+                    STATUS
+                  </div>
+                  <div className={`badge ${summary.compliance_score >= 80 ? 'badge-pass' : summary.compliance_score >= 50 ? 'badge-warning' : 'badge-fail'}`} style={{ fontSize: 12, padding: '4px 10px' }}>
+                    {summary.compliance_score >= 80 ? 'PASSED' : summary.compliance_score >= 50 ? 'NEEDS ATTENTION' : 'FAILED'}
+                  </div>
+                </div>
               </div>
-              <div style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-tertiary)' }}>
-                {summary.total_rules} total controls evaluated
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: 20, paddingLeft: 32, borderLeft: '1px solid var(--border-primary)' }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: 8 }}>
+                    {summary.total_rules} CONTROLS
+                  </div>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--color-pass)' }}>
+                      <span>{passCount}</span>
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>PASS</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 600, color: 'var(--color-fail)' }}>
+                      <span>{failCount}</span>
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>FAIL</span>
+                    </div>
+                  </div>
+                </div>
               </div>
+
             </div>
+          </div>
+
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 12, marginTop: 32 }}>
+            Security Findings
           </div>
 
           {/* Findings table */}

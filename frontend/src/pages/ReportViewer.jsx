@@ -51,17 +51,42 @@ export default function ReportViewer() {
 
       {reports.length === 0 ? (
         <div className="panel">
-          <div className="empty-state" style={{ padding: 60 }}>
-            <div className="empty-state-icon"><FileText size={24} /></div>
-            <div className="empty-state-title">No Reports Generated</div>
+          <div className="empty-state" style={{ padding: '60px 32px' }}>
+            <div className="empty-state-title" style={{ marginBottom: 16, fontSize: 13, letterSpacing: '0.5px' }}>NO REPORTS GENERATED</div>
             <div className="empty-state-text">
-              Completed compliance assessments will appear here. Run an audit and generate a PDF report.
+              Completed compliance assessments will appear here. Run an audit to generate a PDF report.
             </div>
           </div>
         </div>
-      ) : (
-        <div className="table-container">
-          <table className="data-table">
+      ) : (() => {
+        const totalReports = reports.length;
+        const avgScore = totalReports > 0 ? (reports.reduce((acc, r) => acc + r.compliance_score, 0) / totalReports).toFixed(1) : 0;
+        const bestScore = totalReports > 0 ? Math.max(...reports.map(r => r.compliance_score)) : 0;
+        const needsAttention = reports.filter(r => r.compliance_score < 80).length;
+
+        return (
+          <>
+            <div className="panel mb-24" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 20 }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Total Reports</div>
+                <div style={{ fontSize: 28, fontWeight: 700 }}>{totalReports}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Average Score</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: avgScore >= 80 ? 'var(--color-pass)' : avgScore >= 50 ? 'var(--color-warning)' : 'var(--color-fail)' }}>{avgScore}%</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Best Score</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--color-pass)' }}>{bestScore}%</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-warning)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 6 }}>Needs Attention</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: needsAttention > 0 ? 'var(--color-warning)' : 'var(--color-pass)' }}>{needsAttention}</div>
+              </div>
+            </div>
+
+            <div className="table-container">
+              <table className="data-table">
             <thead>
               <tr>
                 <th>ID</th>
@@ -93,9 +118,14 @@ export default function ReportViewer() {
                       <span className="badge badge-neutral">{r.framework}</span>
                     </td>
                     <td>
-                      <span style={{ color: scoreColor, fontWeight: 700, fontSize: 15, fontFeatureSettings: "'tnum'" }}>
-                        {r.compliance_score}%
-                      </span>
+                      <div className="flex flex-col gap-4">
+                        <span style={{ color: scoreColor, fontWeight: 700, fontSize: 15, fontFeatureSettings: "'tnum'" }}>
+                          {r.compliance_score}%
+                        </span>
+                        <span className={`badge ${r.compliance_score >= 80 ? 'badge-pass' : r.compliance_score >= 50 ? 'badge-warning' : 'badge-fail'}`} style={{ width: 'fit-content', fontSize: 9 }}>
+                          {r.compliance_score >= 80 ? 'PASS' : r.compliance_score >= 50 ? 'ATTENTION' : 'FAIL'}
+                        </span>
+                      </div>
                     </td>
                     <td style={{ fontSize: 12 }}>
                       <span style={{ color: 'var(--color-pass)' }}>{r.passed}</span>
@@ -136,9 +166,11 @@ export default function ReportViewer() {
                 )
               })}
             </tbody>
-          </table>
-        </div>
-      )}
+              </table>
+            </div>
+          </>
+        )
+      })()}
     </div>
   )
 }

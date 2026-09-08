@@ -7,6 +7,8 @@ import { listDevices, deleteDevice, triggerAudit } from '../services/api'
 export default function DeviceList() {
   const [devices, setDevices] = useState([])
   const [loading, setLoading] = useState(true)
+  const [filterVendor, setFilterVendor] = useState('all')
+  const [filterType, setFilterType] = useState('all')
   const navigate = useNavigate()
 
   const loadDevices = async () => {
@@ -66,11 +68,40 @@ export default function DeviceList() {
         </div>
       </div>
 
+      {devices.length > 0 && (
+        <div className="panel mb-24" style={{ padding: '12px 16px', display: 'flex', gap: 16, alignItems: 'center' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Filter</div>
+          
+          <select 
+            className="form-select" 
+            style={{ width: 180, padding: '4px 10px', fontSize: 12 }}
+            value={filterVendor}
+            onChange={e => setFilterVendor(e.target.value)}
+          >
+            <option value="all">All Vendors</option>
+            {[...new Set(devices.map(d => d.vendor))].filter(Boolean).map(v => (
+              <option key={v} value={v}>{v}</option>
+            ))}
+          </select>
+
+          <select 
+            className="form-select" 
+            style={{ width: 180, padding: '4px 10px', fontSize: 12 }}
+            value={filterType}
+            onChange={e => setFilterType(e.target.value)}
+          >
+            <option value="all">All Types</option>
+            {[...new Set(devices.map(d => d.device_type))].filter(Boolean).map(t => (
+              <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {devices.length === 0 ? (
         <div className="panel">
-          <div className="empty-state" style={{ padding: 60 }}>
-            <div className="empty-state-icon"><Server size={24} /></div>
-            <div className="empty-state-title">No Devices Registered</div>
+          <div className="empty-state" style={{ padding: '60px 32px' }}>
+            <div className="empty-state-title" style={{ marginBottom: 16, fontSize: 13, letterSpacing: '0.5px' }}>NO DEVICES REGISTERED</div>
             <div className="empty-state-text">
               Import a network device configuration file to populate the device inventory.
             </div>
@@ -79,7 +110,26 @@ export default function DeviceList() {
             </button>
           </div>
         </div>
-      ) : (
+      ) : (() => {
+        const filteredDevices = devices.filter(d => {
+          if (filterVendor !== 'all' && d.vendor !== filterVendor) return false
+          if (filterType !== 'all' && d.device_type !== filterType) return false
+          return true
+        })
+
+        if (filteredDevices.length === 0) {
+          return (
+            <div className="panel">
+              <div className="empty-state" style={{ padding: '40px 32px' }}>
+                <div className="empty-state-title">NO MATCHING DEVICES</div>
+                <div className="empty-state-text">Adjust your filters to see results.</div>
+                <button className="btn btn-ghost btn-sm mt-8" onClick={() => { setFilterVendor('all'); setFilterType('all'); }}>Clear Filters</button>
+              </div>
+            </div>
+          )
+        }
+
+        return (
         <div className="table-container">
           <table className="data-table">
             <thead>
@@ -94,7 +144,7 @@ export default function DeviceList() {
               </tr>
             </thead>
             <tbody>
-              {devices.map((d) => (
+              {filteredDevices.map((d) => (
                 <tr key={d.id}>
                   <td>
                     <span
@@ -141,7 +191,8 @@ export default function DeviceList() {
             </tbody>
           </table>
         </div>
-      )}
+        )
+      })()}
     </div>
   )
 }

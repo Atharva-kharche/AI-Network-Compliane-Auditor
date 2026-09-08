@@ -24,12 +24,18 @@ function TopBar({ title, apiStatus }) {
     <header className="topbar" role="banner">
       <span className="topbar-title">{title}</span>
       <div className="topbar-right">
-        <div className="topbar-status">
+        <div className="topbar-status" style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
           <span
             className={`topbar-status-dot${apiStatus !== 'online' ? ' offline' : ''}`}
             aria-hidden="true"
           />
-          <span>{apiStatus === 'online' ? 'Engine Online' : apiStatus === 'connecting' ? 'Connecting…' : 'Engine Offline'}</span>
+          <span style={{ fontWeight: 600 }}>{apiStatus === 'online' ? 'Engine Online' : apiStatus === 'connecting' ? 'Connecting…' : 'Engine Offline'}</span>
+          {apiStatus === 'online' && (
+            <>
+              <span style={{ margin: '0 8px', color: 'var(--text-muted)' }}>/</span>
+              <span style={{ color: 'var(--color-pass)' }}>API HEALTHY</span>
+            </>
+          )}
         </div>
         <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-mono)' }}>
           v1.0.0

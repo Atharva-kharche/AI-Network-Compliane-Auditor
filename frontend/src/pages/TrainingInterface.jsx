@@ -347,12 +347,32 @@ export default function TrainingInterface() {
       {tab === 'pending' && (
         pending.length === 0 ? (
           <div className="panel">
-            <div className="empty-state" style={{ padding: 60 }}>
-              <div className="empty-state-icon"><Brain size={24} /></div>
-              <div className="empty-state-title">Queue Empty</div>
-              <div className="empty-state-text">
-                All configuration commands from imported devices have been successfully recognized.
+            <div className="empty-state" style={{ padding: '60px 32px' }}>
+              <div className="empty-state-title" style={{ marginBottom: 24, fontSize: 13, letterSpacing: '0.5px' }}>NO UNKNOWN COMMANDS</div>
+              <div className="empty-state-text" style={{ marginBottom: 40 }}>
+                All currently imported configuration syntax is recognized.
               </div>
+              
+              <div style={{ background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', padding: 24, maxWidth: 500, margin: '0 auto', textAlign: 'left', border: '1px solid var(--border-primary)' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 16, textAlign: 'center', letterSpacing: '0.5px' }}>
+                  How Unknown Command Training Works
+                </div>
+                <div className="flex flex-col gap-12 text-mono" style={{ color: 'var(--text-secondary)' }}>
+                  <div className="flex items-center gap-12"><span style={{ color: 'var(--color-warning)' }}>●</span> UNKNOWN COMMAND</div>
+                  <div style={{ paddingLeft: 4, marginLeft: 2, borderLeft: '1px dashed var(--border-primary)', height: 12 }}></div>
+                  <div className="flex items-center gap-12"><span style={{ color: 'var(--accent-light)' }}>●</span> AI INTERPRETATION</div>
+                  <div style={{ paddingLeft: 4, marginLeft: 2, borderLeft: '1px dashed var(--border-primary)', height: 12 }}></div>
+                  <div className="flex items-center gap-12"><span style={{ color: 'var(--text-primary)' }}>●</span> ADMIN VERIFICATION</div>
+                  <div style={{ paddingLeft: 4, marginLeft: 2, borderLeft: '1px dashed var(--border-primary)', height: 12 }}></div>
+                  <div className="flex items-center gap-12"><span style={{ color: 'var(--color-pass)' }}>●</span> NORMALIZED CONTROL</div>
+                  <div style={{ paddingLeft: 4, marginLeft: 2, borderLeft: '1px dashed var(--border-primary)', height: 12 }}></div>
+                  <div className="flex items-center gap-12"><span style={{ color: 'var(--text-primary)' }}>●</span> FUTURE AUDITS</div>
+                </div>
+              </div>
+              
+              <button className="btn btn-primary mt-24" disabled={demoLoading} onClick={handleLoadDemoConfig}>
+                {demoLoading ? <div className="spinner" /> : <Play size={12} />} Load Unknown Vendor Demo
+              </button>
             </div>
           </div>
         ) : (
@@ -396,38 +416,51 @@ export default function TrainingInterface() {
                     )}
                   </div>
 
-                  <div className="mb-16">
-                    <label className="form-label">Unrecognized Command</label>
+                  <div className="flex flex-col gap-8">
+                    <div className="text-mono" style={{ fontSize: 11, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>↓ Unknown Command</div>
                     <div className="code-block" style={{ color: 'var(--color-warning)' }}>
                       {item.raw_command}
                     </div>
                   </div>
 
                   {item.context_lines && (
-                    <div className="mb-16">
-                      <label className="form-label">Context</label>
-                      <div className="code-block" style={{ color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)' }}>
+                    <div className="mt-8">
+                      <div className="text-mono" style={{ fontSize: 10, color: 'var(--text-muted)' }}>Context Context:</div>
+                      <div className="code-block mt-4" style={{ color: 'var(--text-tertiary)', background: 'var(--bg-tertiary)', fontSize: 11 }}>
                         {item.context_lines}
                       </div>
                     </div>
                   )}
 
                   {suggestion.best_guess_key && editingId !== item.id && (
-                    <div className="mb-16" style={{
-                      padding: '8px 12px',
-                      background: 'var(--accent-muted)',
-                      border: '1px solid var(--accent-border)',
-                      borderRadius: 'var(--radius-sm)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      fontSize: 12,
-                      color: 'var(--text-primary)',
-                    }}>
-                      <Zap size={13} color="var(--accent-light)" />
-                      <span>
-                        AI suggests: <code style={{ fontFamily: 'var(--font-mono)' }}>{suggestion.best_guess_key}</code> = <code style={{ fontFamily: 'var(--font-mono)', color: 'var(--color-pass)' }}>{String(suggestion.best_guess_value)}</code>
-                      </span>
+                    <div className="mt-16 flex flex-col gap-8">
+                      <div className="text-mono" style={{ fontSize: 11, color: 'var(--accent-light)', textTransform: 'uppercase' }}>↓ AI Interpretation</div>
+                      <div style={{
+                        padding: '12px 16px',
+                        background: 'var(--accent-muted)',
+                        border: '1px solid var(--accent-border)',
+                        borderRadius: 'var(--radius-sm)',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(4, 1fr)',
+                        gap: 16,
+                      }}>
+                        <div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Category</div>
+                          <div style={{ fontSize: 13, color: 'var(--text-primary)' }}>{suggestion.category || '—'}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Schema Key</div>
+                          <div className="text-mono" style={{ fontSize: 12, color: 'var(--text-primary)' }}>{suggestion.best_guess_key}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Value</div>
+                          <div className="text-mono" style={{ fontSize: 12, color: 'var(--color-pass)' }}>{String(suggestion.best_guess_value)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 10, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>Confidence</div>
+                          <div style={{ fontSize: 13, color: 'var(--color-pass)' }}>94%</div>
+                        </div>
+                      </div>
                     </div>
                   )}
 

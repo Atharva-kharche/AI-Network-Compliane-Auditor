@@ -57,6 +57,23 @@ export default function UploadConfig() {
 
       <FileUploader onUploadSuccess={handleUploadSuccess} />
 
+      <div style={{ marginTop: 32, textAlign: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
+          {['01 IMPORT', '02 IDENTIFY', '03 NORMALIZE', '04 AUDIT', '05 REPORT'].map((step, i) => (
+            <div key={step} style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: i === 0 ? 'var(--accent-light)' : 'var(--text-tertiary)', letterSpacing: '0.5px' }}>
+                {step}
+              </span>
+              {i < 4 && <span style={{ color: 'var(--border-primary)' }}>→</span>}
+            </div>
+          ))}
+        </div>
+        
+        <p style={{ fontSize: 13, color: 'var(--text-secondary)', maxWidth: 600, margin: '0 auto', lineHeight: 1.6 }}>
+          NetAudit AI detects vendor syntax, converts configuration into a vendor-neutral security model, and evaluates it against compliance controls.
+        </p>
+      </div>
+
       {/* Uploaded Devices */}
       <div className="panel mt-24">
         <div className="panel-header">
@@ -72,10 +89,9 @@ export default function UploadConfig() {
             <span>Loading devices…</span>
           </div>
         ) : devices.length === 0 ? (
-          <div className="empty-state" style={{ padding: 40 }}>
-            <div className="empty-state-icon"><Server size={20} /></div>
-            <div className="empty-state-title">No Devices Imported</div>
-            <div className="empty-state-text">Upload a configuration file above to begin analysis</div>
+          <div className="empty-state" style={{ padding: 60 }}>
+            <div className="empty-state-title" style={{ marginBottom: 16, fontSize: 13, letterSpacing: '0.5px' }}>NO DEVICES IMPORTED</div>
+            <div className="empty-state-text">Upload a configuration file above to begin analysis.</div>
           </div>
         ) : (
           <div className="table-container" style={{ border: 'none', background: 'transparent' }}>
