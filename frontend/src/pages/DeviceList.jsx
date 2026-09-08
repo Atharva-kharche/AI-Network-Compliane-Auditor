@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Server, Trash2, Play, Eye, Upload } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { listDevices, deleteDevice, triggerAudit } from '../services/api'
+import { formatDeviceName } from '../utils'
 
 export default function DeviceList() {
   const [devices, setDevices] = useState([])
@@ -159,7 +160,7 @@ export default function DeviceList() {
                       role="link"
                       tabIndex={0}
                     >
-                      {d.hostname}
+                      {formatDeviceName(d)}
                     </span>
                   </td>
                   <td>

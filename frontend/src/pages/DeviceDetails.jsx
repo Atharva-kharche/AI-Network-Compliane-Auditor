@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { Play, FileText, ArrowLeft, Code, Database } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { getDevice, triggerAudit } from '../services/api'
+import { formatDeviceName } from '../utils'
 
 // Simple JSON tree renderer
 function JsonTree({ data, depth = 0 }) {
@@ -111,7 +112,9 @@ export default function DeviceDetails() {
             <button className="btn btn-ghost btn-sm mb-4" onClick={() => navigate(-1)}>
               <ArrowLeft size={13} /> Back
             </button>
-            <h1 className="page-title" style={{ fontFamily: 'var(--font-mono)' }}>{device.hostname}</h1>
+            <div className="flex gap-16 items-center">
+              <h1 className="page-title" style={{ fontFamily: 'var(--font-mono)' }}>{formatDeviceName(device)}</h1>
+            </div>
             <p className="page-subtitle">
               <span style={{ textTransform: 'capitalize' }}>{device.vendor}</span> · {device.model} · <span style={{ fontFamily: 'var(--font-mono)' }}>{device.os_version}</span>
             </p>
@@ -137,7 +140,8 @@ export default function DeviceDetails() {
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 16 }}>
           {[
-            ['Hostname', device.hostname, true],
+            ['ID', device.id, true],
+            ['Hostname', formatDeviceName(device), true],
             ['Vendor', device.vendor, false],
             ['Model', device.model, false],
             ['OS Version', device.os_version, true],

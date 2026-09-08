@@ -12,6 +12,7 @@ import {
   generateReport,
   getReportDownloadUrl,
 } from '../services/api'
+import { formatDeviceName, isUnassessed } from '../utils'
 
 const FRAMEWORKS = ['CIS', 'NIST', 'STIG']
 
@@ -202,7 +203,7 @@ export default function AuditResults() {
           <div>
             <h1 className="page-title">Compliance Assessment</h1>
             <p className="page-subtitle">
-              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{device?.hostname}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--text-secondary)' }}>{formatDeviceName(device)}</span>
               {' — '}
               <span style={{ textTransform: 'capitalize' }}>{device?.vendor}</span>
               {' '}{device?.model}
@@ -232,7 +233,7 @@ export default function AuditResults() {
         <div className="panel mb-20">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 14 }}>
             {[
-              ['Hostname', device.hostname, true],
+              ['Hostname', formatDeviceName(device), true],
               ['Vendor', device.vendor, false],
               ['Model', device.model, false],
               ['OS', device.os_version, true],
@@ -271,10 +272,12 @@ export default function AuditResults() {
       </div>
 
       {/* Score + Results */}
-      {summary ? (
+      {summary ? (() => {
+        const unassessed = isUnassessed(summary.compliance_score, device.vendor, passCount, failCount)
+        return (
         <>
           {/* Score overview strip */}
-          <div className="panel mb-20" style={{ borderTop: `4px solid ${summary.compliance_score >= 80 ? 'var(--color-pass)' : summary.compliance_score >= 50 ? 'var(--color-warning)' : 'var(--color-fail)'}` }}>
+          <div className="panel mb-20" style={{ borderTop: `4px solid ${unassessed ? 'var(--color-warning)' : summary.compliance_score >= 80 ? 'var(--color-pass)' : summary.compliance_score >= 50 ? 'var(--color-warning)' : 'var(--color-fail)'}` }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 32 }}>
               
               <div style={{ flex: '1 1 auto' }}>
@@ -282,7 +285,7 @@ export default function AuditResults() {
                   AUDIT COMPLETE
                 </div>
                 <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>
-                  {device.hostname}
+                  {formatDeviceName(device)}
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
                   <span style={{ textTransform: 'capitalize' }}>{device.vendor}</span> {device.os_version} · {framework} Framework
@@ -292,24 +295,25 @@ export default function AuditResults() {
               <div style={{ display: 'flex', alignItems: 'center', gap: 32, paddingLeft: 32, borderLeft: '1px solid var(--border-primary)' }}>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 4 }}>
-                    COMPLIANCE SCORE
+                    {unassessed ? 'ASSESSMENT STATUS' : 'COMPLIANCE SCORE'}
                   </div>
-                  <div style={{ fontSize: 36, fontWeight: 800, lineHeight: 1, fontFeatureSettings: "'tnum'", color: summary.compliance_score >= 80 ? 'var(--color-pass)' : summary.compliance_score >= 50 ? 'var(--color-warning)' : 'var(--color-fail)' }}>
-                    {summary.compliance_score}%
+                  <div style={{ fontSize: unassessed ? 28 : 36, fontWeight: 800, lineHeight: 1, fontFeatureSettings: "'tnum'", color: unassessed ? 'var(--text-muted)' : summary.compliance_score >= 80 ? 'var(--color-pass)' : summary.compliance_score >= 50 ? 'var(--color-warning)' : 'var(--color-fail)' }}>
+                    {unassessed ? 'UNASSESSED' : `${summary.compliance_score}%`}
                   </div>
                 </div>
                 
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: 8 }}>
-                    STATUS
+                    {unassessed ? 'ACTION REQUIRED' : 'STATUS'}
                   </div>
-                  <div className={`badge ${summary.compliance_score >= 80 ? 'badge-pass' : summary.compliance_score >= 50 ? 'badge-warning' : 'badge-fail'}`} style={{ fontSize: 12, padding: '4px 10px' }}>
-                    {summary.compliance_score >= 80 ? 'PASSED' : summary.compliance_score >= 50 ? 'NEEDS ATTENTION' : 'FAILED'}
+                  <div className={`badge ${unassessed ? 'badge-warning' : summary.compliance_score >= 80 ? 'badge-pass' : summary.compliance_score >= 50 ? 'badge-warning' : 'badge-fail'}`} style={{ fontSize: 12, padding: '4px 10px', cursor: unassessed ? 'pointer' : 'default' }} onClick={() => unassessed && navigate('/training')}>
+                    {unassessed ? 'AI TRAINING REQUIRED' : summary.compliance_score >= 80 ? 'PASSED' : summary.compliance_score >= 50 ? 'NEEDS ATTENTION' : 'FAILED'}
                   </div>
+                  {unassessed && <div style={{ fontSize: 10, color: 'var(--text-tertiary)', marginTop: 6, fontWeight: 500 }}>(Numeric Score: 0%)</div>}
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: 20, paddingLeft: 32, borderLeft: '1px solid var(--border-primary)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 20, paddingLeft: 32, borderLeft: '1px solid var(--border-primary)', opacity: unassessed ? 0.5 : 1 }}>
                 <div>
                   <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-primary)', textTransform: 'uppercase', marginBottom: 8 }}>
                     {summary.total_rules} CONTROLS
@@ -337,7 +341,8 @@ export default function AuditResults() {
           {/* Findings table */}
           <FindingsTable results={results} />
         </>
-      ) : (
+        )
+      })() : (
         <div className="panel">
           <div className="empty-state" style={{ padding: 60 }}>
             <div className="empty-state-icon"><RefreshCw size={20} /></div>

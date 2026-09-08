@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { FileText, Download, RefreshCw } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { listReports, generateReport, getReportDownloadUrl } from '../services/api'
+import { formatDeviceName, isUnassessed } from '../utils'
 
 export default function ReportViewer() {
   const [reports, setReports] = useState([])
@@ -100,7 +101,8 @@ export default function ReportViewer() {
             </thead>
             <tbody>
               {reports.map((r) => {
-                const scoreColor =
+                const unassessed = isUnassessed(r.compliance_score, undefined, r.passed, r.failed)
+                const scoreColor = unassessed ? 'var(--text-muted)' :
                   r.compliance_score >= 80 ? 'var(--color-pass)' :
                   r.compliance_score >= 50 ? 'var(--color-warning)' :
                   'var(--color-fail)'
@@ -111,7 +113,7 @@ export default function ReportViewer() {
                     <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: 'var(--text-tertiary)' }}>#{r.id}</td>
                     <td>
                       <span style={{ color: 'var(--accent-light)', fontWeight: 600, fontFamily: 'var(--font-mono)', fontSize: 12 }}>
-                        {r.device_hostname || `Device #${r.device_id}`}
+                        {formatDeviceName({ hostname: r.device_hostname, id: r.device_id })}
                       </span>
                     </td>
                     <td>
@@ -120,10 +122,10 @@ export default function ReportViewer() {
                     <td>
                       <div className="flex flex-col gap-4">
                         <span style={{ color: scoreColor, fontWeight: 700, fontSize: 15, fontFeatureSettings: "'tnum'" }}>
-                          {r.compliance_score}%
+                          {unassessed ? 'UNASSESSED' : `${r.compliance_score}%`}
                         </span>
-                        <span className={`badge ${r.compliance_score >= 80 ? 'badge-pass' : r.compliance_score >= 50 ? 'badge-warning' : 'badge-fail'}`} style={{ width: 'fit-content', fontSize: 9 }}>
-                          {r.compliance_score >= 80 ? 'PASS' : r.compliance_score >= 50 ? 'ATTENTION' : 'FAIL'}
+                        <span className={`badge ${unassessed ? 'badge-warning' : r.compliance_score >= 80 ? 'badge-pass' : r.compliance_score >= 50 ? 'badge-warning' : 'badge-fail'}`} style={{ width: 'fit-content', fontSize: 9 }}>
+                          {unassessed ? 'AI TRAINING REQUIRED' : r.compliance_score >= 80 ? 'PASS' : r.compliance_score >= 50 ? 'ATTENTION' : 'FAIL'}
                         </span>
                       </div>
                     </td>

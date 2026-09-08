@@ -9,6 +9,7 @@ import {
   Shield,
 } from 'lucide-react'
 import { getDashboardStats, getRiskDistribution } from '../services/api'
+import { formatDeviceName, isUnassessed } from '../utils'
 
 function DashboardSkeleton() {
   return (
@@ -61,6 +62,7 @@ function ScoreDisplay({ score, devicesAudited }) {
 
 const ChartTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null
+  const data = payload[0].payload
   return (
     <div style={{
       background: 'var(--bg-elevated)',
@@ -69,12 +71,18 @@ const ChartTooltip = ({ active, payload, label }) => {
       padding: '8px 12px',
       fontSize: 12,
     }}>
-      <div style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 2 }}>{label}</div>
-      {payload.map((p, i) => (
-        <div key={i} style={{ color: p.color, fontSize: 11 }}>
-          {p.name}: {p.value}%
+      <div style={{ color: 'var(--text-primary)', fontWeight: 600, marginBottom: 2 }}>{data.displayName}</div>
+      {data.unassessed ? (
+        <div style={{ color: 'var(--text-muted)', fontSize: 11 }}>
+          UNASSESSED
         </div>
-      ))}
+      ) : (
+        payload.map((p, i) => (
+          <div key={i} style={{ color: p.color, fontSize: 11 }}>
+            {p.name}: {p.value}%
+          </div>
+        ))
+      )}
     </div>
   )
 }
@@ -124,7 +132,15 @@ export default function Dashboard() {
   }
 
   const hasData = stats && (stats.total_devices > 0 || stats.total_audits > 0)
-  const recentAudits = stats?.recent_audits || []
+  const recentAudits = stats?.recent_audits?.map(r => {
+    const unassessed = isUnassessed(r.score, r.vendor, r.passed, r.failed)
+    return {
+      ...r,
+      displayName: formatDeviceName({ hostname: r.hostname, id: r.device_id }),
+      unassessed: unassessed,
+      displayScore: unassessed ? 0 : r.score,
+    }
+  }) || []
   const totalFindings = risk ? (risk.critical + risk.high + risk.medium + risk.low + risk.info) : 0
 
   // Severity distribution data
@@ -245,7 +261,7 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={recentAudits.slice(0, 8)} barCategoryGap="20%">
                 <XAxis
-                  dataKey="name"
+                  dataKey="displayName"
                   tick={{ fill: '#64748b', fontSize: 11 }}
                   axisLine={{ stroke: 'rgba(148,163,184,0.08)' }}
                   tickLine={false}
@@ -259,12 +275,12 @@ export default function Dashboard() {
                 />
                 <Tooltip content={<ChartTooltip />} />
                 <Bar
-                  dataKey="score"
+                  dataKey="displayScore"
                   name="Compliance"
                   fill="var(--accent)"
                   radius={[3, 3, 0, 0]}
                   maxBarSize={40}
-                  label={{ position: 'top', fill: 'var(--text-primary)', fontSize: 11, fontWeight: 600, formatter: (val) => `${val}%` }}
+                  label={{ position: 'top', fill: 'var(--text-primary)', fontSize: 11, fontWeight: 600, formatter: (val, name, props) => props.payload.unassessed ? 'UNASSESSED' : `${val}%` }}
                 />
               </BarChart>
             </ResponsiveContainer>
@@ -344,7 +360,9 @@ export default function Dashboard() {
                         {a.type}
                       </span>
                     </td>
-                    <td style={{ fontWeight: 500 }}>{a.description}</td>
+                    <td style={{ fontWeight: 500 }}>
+                      {a.description.replace(/\bunknown\b/gi, formatDeviceName({ hostname: 'unknown', id: a.device_id }))}
+                    </td>
                     <td style={{ color: 'var(--text-tertiary)', fontSize: 11, fontFamily: 'var(--font-mono)' }}>
                       {new Date(a.timestamp).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
                     </td>

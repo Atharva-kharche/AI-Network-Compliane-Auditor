@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import {
   getPendingTraining, submitMapping, getAllMappings, deleteMapping, reAuditDevice, listDevices, loadDemoUnknownConfig
 } from '../services/api'
+import { formatDeviceName } from '../utils'
 
 const CATEGORIES = [
   'authentication', 'remote_access', 'encryption', 'logging',
@@ -173,7 +174,7 @@ export default function TrainingInterface() {
       const res = await reAuditDevice(device.id, 'CIS')
       toast.success(res.message || 'Device re-audited successfully')
       setAuditResultNotification({
-        hostname: device.hostname,
+        hostname: formatDeviceName(device),
         vendor: device.vendor,
         score: res.compliance_score,
         previousScore: res.previous_score,
@@ -561,7 +562,7 @@ export default function TrainingInterface() {
                     onClick={() => handleReAudit(device)}
                   >
                     {reAuditing[device.id] ? <div className="spinner" /> : <RefreshCw size={12} />}
-                    Re-Audit <span style={{ fontFamily: 'var(--font-mono)', marginLeft: 4 }}>{device.hostname}</span>
+                    Re-Audit <span style={{ fontFamily: 'var(--font-mono)', marginLeft: 4 }}>{formatDeviceName(device)}</span>
                   </button>
                 ))
               )}

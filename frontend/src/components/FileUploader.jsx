@@ -2,6 +2,7 @@ import { useState, useRef } from 'react'
 import { UploadCloud, FileText, CheckCircle, Loader, Check } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { uploadConfig } from '../services/api'
+import { formatDeviceName } from '../utils'
 
 export default function FileUploader({ onUploadSuccess }) {
   const [isDragging, setIsDragging] = useState(false)
@@ -135,7 +136,7 @@ export default function FileUploader({ onUploadSuccess }) {
           <div className="detail-grid" style={{ margin: 0 }}>
             <div className="detail-item">
               <label>Hostname</label>
-              <span style={{ fontFamily: 'var(--font-mono)' }}>{uploadResult.device?.hostname}</span>
+              <span style={{ fontFamily: 'var(--font-mono)' }}>{formatDeviceName(uploadResult.device)}</span>
             </div>
             <div className="detail-item">
               <label>Vendor</label>
