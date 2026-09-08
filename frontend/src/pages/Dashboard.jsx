@@ -280,7 +280,11 @@ export default function Dashboard() {
                   fill="var(--accent)"
                   radius={[3, 3, 0, 0]}
                   maxBarSize={40}
-                  label={{ position: 'top', fill: 'var(--text-primary)', fontSize: 11, fontWeight: 600, formatter: (val, name, props) => props.payload.unassessed ? 'UNASSESSED' : `${val}%` }}
+                  label={{ position: 'top', fill: 'var(--text-primary)', fontSize: 11, fontWeight: 600, formatter: (val, name, props) => {
+                    if (props && props.payload && props.payload.unassessed) return 'UNASSESSED'
+                    if (val === undefined || val === null || val === 0) return ''
+                    return `${val}%`
+                  } }}
                 />
               </BarChart>
             </ResponsiveContainer>
